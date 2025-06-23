@@ -7,7 +7,7 @@
 
 // 定义Trie树的节点结构
 typedef struct TrieNode {
-    struct TrieNode* children[256]; // 字符集大小(ASCII)
+    struct TrieNode* children[37]; // 0-9, a-z, .
     char* ip;                        // IP字段
     int isEnd;                       // 是否是域名字符串的末端
 } TrieNode;
