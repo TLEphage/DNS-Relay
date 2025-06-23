@@ -1,6 +1,10 @@
 #include "../src/trie.h"
 
+const uint8_t A[]={1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4};
+const char web1[]="www.baidu.com";
+
 int main() {
+    /*
     TrieNode* root = trie_create();
     trie_insert(root, "www.google.com", "1.1.1.1");
     trie_insert(root, "www.google.com", "2.2.2.2");
@@ -67,6 +71,39 @@ int main() {
     response = trie_search(root, "www.baidu.com");
     if (response!=NULL) printf("%s\n", response);
     else printf("none\n");
+    */
+
+    DNSRecord temp;
+    memcpy(temp.domain,web1,sizeof(web1));
+    temp.expire_time=100;
+    temp.type=1;
+    temp.addr.ipv4=111;
+    temp.trie_next=NULL;
+    temp.trie_prev=NULL;
+    temp.lru_next=NULL;
+    temp.lru_prev=NULL;
+
+    DNSRecord* a=malloc(sizeof(DNSRecord));
+    memcpy(a,&temp,sizeof(DNSRecord));
+
+    temp.type=2;
+    memcpy(temp.addr.ipv6,A,sizeof(temp.addr.ipv6));
+    DNSRecord* b=malloc(sizeof(DNSRecord));
+    memcpy(b,&temp,sizeof(DNSRecord));
+
+    TrieNode* root = trie_create();
+    trie_insert(root, a->domain, a);
+    trie_insert(root, b->domain, b);
+    trie_print(root, "www.baidu.com");
+    printf("done\n");
+
+    trie_delete(root, a->domain, a);
+    trie_print(root, "www.baidu.com");
+    printf("done\n");
+
+    trie_delete(root, b->domain, b);
+    trie_print(root, "www.baidu.com");
+    printf("done\n");
 
     system("pause");
     return 0;
