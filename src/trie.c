@@ -1,0 +1,69 @@
+#include "trie.h"
+
+// 创建Trie树节点
+TrieNode* trie_create() {
+    TrieNode* node = (TrieNode*)malloc(sizeof(TrieNode));
+    if (node == NULL) {
+        fprintf(stderr, "Memory allocation failed for TrieNode\n");
+        exit(1);
+    }
+    for (int i = 0; i < 256; i++) {
+        node->children[i] = NULL;
+    }
+    node->ip = NULL;
+    node->isEnd = 0;
+    return node;
+}
+
+// 插入域名和IP到Trie树
+void trie_insert(TrieNode* root, const char* domain, const char* ip) {
+    TrieNode* node = root;
+    for (int i = 0; domain[i] != '\0'; i++) {
+        int index = (unsigned char)domain[i]; // 获取当前字符的ASCII码
+        if (node->children[index] == NULL) {
+            // 如果当前字符不存在，则创建新节点
+            node->children[index] = trie_create();
+        }
+        node = node->children[index];
+    }
+    // 设置为域名字符串的末端，并存储IP
+    node->isEnd = 1;
+    if (node->ip != NULL) {
+        free(node->ip); // 如果已存在，先释放原有内存
+    }
+    node->ip = strdup(ip); // 复制IP
+}
+
+// 通过域名查找对应的IP
+char* trie_search(TrieNode* root, const char* domain) {
+    TrieNode* node = root;
+    for (int i = 0; domain[i] != '\0'; i++) {
+        int index = (unsigned char)domain[i];
+        if (node->children[index] == NULL) {
+            // 如果找不到匹配的域名，返回NULL
+            return NULL;
+        }
+        node = node->children[index];
+    }
+    // 如果到达域名字符串末的尾且该节点有效，则返回IP
+    return node->isEnd ? node->ip : NULL;
+}
+
+// 清理Trie树释放内存
+void trie_free(TrieNode* root) {
+    if (root == NULL) return;
+    
+    for (int i = 0; i < 256; i++) {
+        if (root->children[i] != NULL) {
+            trie_free(root->children[i]); // 递归清理子节点
+        }
+    }
+    
+    // 释放当前节点的IP内存
+    if (root->ip != NULL) {
+        free(root->ip);
+    }
+    
+    // 释放当前节点
+    free(root);
+}
