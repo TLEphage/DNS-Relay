@@ -1,4 +1,6 @@
 #include "server.h"
+#include "dnsStruct.h"
+
 
 int main() {
 
