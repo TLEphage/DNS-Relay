@@ -182,11 +182,10 @@ void trie_delete(TrieNode* root, const char* domain, const DNSRecord* record) {
     }
 
     node->isEnd = 0;
-    node->sum--;
 
     node = root;
+    node->sum--;
     for (int i = len - 1; i >= 0; i--) {
-        node->sum--;
         int index = -1; 
         if (domain[i]>='0' && domain[i]<='9') index = domain[i] - '0';
         else if(domain[i] >= 'a' && domain[i] <= 'z') {
@@ -205,6 +204,7 @@ void trie_delete(TrieNode* root, const char* domain, const DNSRecord* record) {
             return ;
         }
         node = node->children[index];
+        node->sum--;
     }
 }
 

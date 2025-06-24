@@ -17,6 +17,13 @@ typedef struct DNSCache {
     int capacity;   // 最大容量
 }DNSCache;
 
+extern DNSCache* dns_cache;
+
+typedef struct CacheQueryResult {
+    DNSRecord* record;
+    struct CacheQueryResult* next;
+}CacheQueryResult;
+
 DNSCache* cache_create(int capacity);
 
 void lru_insert(DNSCache* cache, DNSRecord* record);
@@ -27,8 +34,10 @@ void cache_eliminate(DNSCache* cache);
 
 void cache_update(DNSCache* cache, const char* domain, const uint8_t type, const void* value, time_t ttl);
 
-DNSCache* cache_query(DNSCache* cache, const char* domain);
+CacheQueryResult* cache_query(DNSCache* cache, const char* domain, const uint8_t type);
 
-void cache_free(DNSCache* cache);
+void cache_query_free(CacheQueryResult* result);
+
+void cache_destroy(DNSCache* cache);
 
 #endif // CACHE_H

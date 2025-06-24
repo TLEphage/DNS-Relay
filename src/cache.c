@@ -1,4 +1,5 @@
 #include "cache.h"
+#include <time.h>
 
 DNSCache* cache_create(int capacity) {
     DNSCache* cache = (DNSCache*)malloc(sizeof(DNSCache));
@@ -50,20 +51,20 @@ void cache_update(DNSCache* cache, const char* domain, const uint8_t type, const
         fprintf(stderr, "Failed to create DNS record\n");
         return;
     }
-
+    
     DNSRecord* isExist = NULL;
     TrieNode* node = trie_search(cache->root, domain);
     if (node != NULL) {
         DNSRecord* p = node->head;
-        while (record != NULL) {
+        while (p != NULL) {
             if (DNSRecord_compare(p, record) == 1) {
                 isExist = p;
                 break;
             }
-            p = p->lru_next;
+            p = p->trie_next;
         }
     }
-
+    
     if (isExist == NULL) {     // 无相同记录
         if (cache->size == cache->capacity) { // 缓存已满
             cache_eliminate(cache);
@@ -72,19 +73,80 @@ void cache_update(DNSCache* cache, const char* domain, const uint8_t type, const
         lru_insert(cache, record);
     } else {    // 有相同记录
         lru_delete(cache, isExist);
-        trie_delete(cache, domain, isExist);
+        trie_delete(cache->root, domain, isExist);
         free(isExist);
         lru_insert(cache, record);
         trie_insert(cache->root, domain, record);
     }
 }
 
-void cache_free(DNSCache* cache) {
+CacheQueryResult* cache_query(DNSCache* cache, const char* domain, const uint8_t type) {
+    // 构建结果链表
+    CacheQueryResult* result = NULL;
+    CacheQueryResult* current = NULL;
+    
+    const int MAX_CNAME_DEPTH = 5;
+    int cname_depth = 0;
+    
+    TrieNode* node = trie_search(cache->root, domain);
+    while (node != NULL && node->head->type == RR_CNAME) {
+        ++cname_depth;
+        if(cname_depth > MAX_CNAME_DEPTH) {
+            fprintf(stderr, "CNAME loop detected\n");
+            cache_query_free(result);
+            return NULL;
+        }
+        if (current == NULL) {
+            result = malloc(sizeof(CacheQueryResult));
+            current = result;
+        } else {
+            current->next = malloc(sizeof(CacheQueryResult));
+            current = current->next;
+        }
+        current->record = node->head;
+        current->next = NULL;
+        node = trie_search(cache->root, node->head->domain);
+    }
+
+    if (type == RR_CNAME) {
+        return result;
+    }
+    
+    int isExist = 0;
+    DNSRecord* p = node->head;
+    while (p != NULL) {
+        if (p->type == type) {
+            current->record = p;
+            current->next = malloc(sizeof(CacheQueryResult));
+            current = current->next;
+            current->next = NULL;
+            current->record = NULL;
+            isExist = 1;
+        }
+        p = p->trie_next;
+    }
+    if (!isExist) {
+        cache_query_free(result);
+        return NULL;
+    }
+    return result;
+}
+
+void cache_query_free(CacheQueryResult* result) {
+    CacheQueryResult* p = result;
+    while (p != NULL) {
+        CacheQueryResult* next = p->next;
+        free(p);
+        p = next;
+    }
+}
+
+void cache_destroy(DNSCache* cache) {
     trie_free(cache->root);
     while (cache->head != NULL) {
-        DNSCache* node = cache->head;
-        cache->head = cache->head->lru_next;
-        free(cache->head->lru_prev);
+        DNSRecord* next = cache->head->lru_next;
+        free(cache->head);
+        cache->head = next;
     }
     free(cache);
 }
