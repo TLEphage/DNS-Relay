@@ -20,13 +20,15 @@ typedef struct DNSRecord {
         uint32_t ipv4;              // IPv4 地址
         uint8_t ipv6[16];           // IPv6 地址
         char cname[DOMAIN_MAX_LEN]; // CNAME记录
-    } addr;
+    } value;
 
     struct DNSRecord* trie_next; // 同域名的下一个记录
     struct DNSRecord* trie_prev; // 同域名的上一个记录
     struct DNSRecord* lru_next; // LRU链表的下一个节点
     struct DNSRecord* lru_prev; // LRU链表的上一个节点
 } DNSRecord;
+
+DNSRecord* DNSRecord_create(const char* domain, time_t expire_time, uint8_t type, const void* value);
 
 int DNSRecord_compare(const DNSRecord* a, const DNSRecord* b);
 
