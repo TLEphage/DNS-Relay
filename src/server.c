@@ -58,7 +58,7 @@ void poll() {
 
     while (1)
     {
-        timeoutHandle();
+        // timeoutHandle();
 
         fds[0].fd = client_socket;
         fds[0].events = POLLIN;  // POLLIN 表示可读
@@ -616,7 +616,7 @@ void receiveClient() {
         printf("Cache hit for: %s\n", query_name);
 
         // 使用多记录响应构建函数
-        int response_len = build_multi_record_response((unsigned char *)buffer, BUF_SIZE, client_txid, query_name, query_type, cached_record);
+        int response_len = build_multi_record_response((unsigned char *)buffer, BUFFER_SIZE, client_txid, query_name, query_type, cached_record);
 
         // 如果是CNAME或者RR_A查询，打印要发送的字节数据
         if ((query_type == RR_CNAME || query_type == RR_A) && response_len > 0)
