@@ -111,12 +111,10 @@ int build_multi_record_response(unsigned char *buffer,
                                 uint16_t transactionID,
                                 const char *query_name,
                                 uint16_t query_type,
-                                CacheQueryResult *first_record)
-{
+                                CacheQueryResult *first_record) {
     if (!buffer || !query_name || !first_record) {
         return -1;
     }
-
     int offset = 0;
 
     // 计算所有记录的数量（包括CNAME记录）
@@ -321,8 +319,7 @@ int build_multi_record_response(unsigned char *buffer,
  */
 int build_nxdomain_response(unsigned char *buffer, int buf_size, uint16_t transactionID, const char *query_name, uint16_t query_type)
 {
-    if (!buffer || !query_name || buf_size < 12)
-    {
+    if (!buffer || !query_name || buf_size < 12) {
         return -1;
     }
 
@@ -445,66 +442,85 @@ void receiveClient() {
     // 保存客户端地址以便后续回复
     struct sockaddr_in original_client = clientAddress;
 
-    print_cache_status(dns_cache);
+    // print_cache_status(dns_cache);
 
     // 1. 先查询缓存，支持CNAME链解析
-    CacheQueryResult query_res;
-    query_res = query_cache(dns_cache, query_name, msg.question->qtype);
+    CacheQueryResult* query_res;
+    query_res = cache_query(dns_cache, query_name, msg.question->qtype);
 
     // 2. 如果缓存命中
     if (query_res != NULL) {
         printf("Cache hit for: %s\n", query_name);
 
-        // 使用多记录响应构建函数
-        int response_len = build_multi_record_response((unsigned char *)buffer, BUFFER_SIZE, client_txid, query_name, query_type, query_res);
-
-        // 如果是CNAME或者RR_A查询，打印要发送的字节数据
-        if ((query_type == RR_CNAME || query_type == RR_A) && response_len > 0)
-        {
-            LOG_BYTE("=== CNAME Response Bytes Debug (Length: %d) ===\n", response_len);
-            for (int i = 0; i < response_len; i++)
-            {
-                LOG_BYTE("%02X ", (unsigned char)buffer[i]);
-                if ((i + 1) % 16 == 0)
-                    LOG_BYTE("\n"); // 每16字节换行
+        // 先判断ip地址中是否有0.0.0.0的不良记录需要拦截
+        CacheQueryResult *current = query_res;
+        bool is_blocked = false;
+        while (current != NULL) {
+            if (current->record->type == RR_A && strcmp(current->record->value, "0.0.0.0") == 0) {
+                is_blocked = true;
+                break;
+            } else if(current->record->type == RR_AAAA && strcmp(current->record->value, "::") == 0) {
+                is_blocked = true;
+                break;
             }
-            if (response_len % 16 != 0)
-                LOG_BYTE("\n"); // 最后一行换行
-
-            // 也打印ASCII可读部分
-            LOG_BYTE("ASCII representation:\n");
-            for (int i = 0; i < response_len; i++)
-            {
-                char c = buffer[i];
-                if (c >= 32 && c <= 126)
-                {
-                    LOG_BYTE("%c", c);
-                }
-                else
-                {
-                    LOG_BYTE(".");
-                }
-                if ((i + 1) % 64 == 0)
-                    LOG_BYTE("\n"); // 每64字符换行
-            }
-            if (response_len % 64 != 0)
-                LOG_BYTE("\n");
-            LOG_BYTE("===============================================\n");
+            current = current->next;
         }
 
-        // 发送缓存响应给客户端
-        sendto(client_socket, buffer, response_len, 0, (struct sockaddr *)&original_client, address_length);
+        if (is_blocked) {
+            printf("Domain %s is BLOCKED, returning NXDOMAIN response\n", query_name);
 
-        // 如果使用了临时链表，需要释放
-        if (is_temp_chain)
-        {
-            free_temp_record_chain(cached_record);
+            // 构建NXDOMAIN响应
+            int response_len = build_nxdomain_response((unsigned char *)buffer, BUFFER_SIZE, transactionID, query_name, query_type);
+            if (response_len > 0) {
+                // 发送NXDOMAIN响应给客户端
+                sendto(client_socket, buffer, response_len, 0, (struct sockaddr *)&original_client, address_length);
+                printf("Sent NXDOMAIN response for blocked domain: %s\n", query_name);
+            } else {
+                printf("Failed to build NXDOMAIN response for: %s\n", query_name);
+            }
+            return ;
+        } else {
+            // 使用多记录响应构建函数
+            int response_len = build_multi_record_response((unsigned char *)buffer, BUFFER_SIZE, client_txid, query_name, query_type, query_res);
+
+            // 如果是CNAME或者RR_A查询，打印要发送的字节数据
+            if ((query_type == RR_CNAME || query_type == RR_A) && response_len > 0)
+            {
+                LOG_BYTE("=== CNAME Response Bytes Debug (Length: %d) ===\n", response_len);
+                for (int i = 0; i < response_len; i++)
+                {
+                    LOG_BYTE("%02X ", (unsigned char)buffer[i]);
+                    if ((i + 1) % 16 == 0)
+                        LOG_BYTE("\n"); // 每16字节换行
+                }
+                if (response_len % 16 != 0)
+                    LOG_BYTE("\n"); // 最后一行换行
+
+                // 也打印ASCII可读部分
+                LOG_BYTE("ASCII representation:\n");
+                for (int i = 0; i < response_len; i++)
+                {
+                    char c = buffer[i];
+                    if (c >= 32 && c <= 126)
+                    {
+                        LOG_BYTE("%c", c);
+                    }
+                    else
+                    {
+                        LOG_BYTE(".");
+                    }
+                    if ((i + 1) % 64 == 0)
+                        LOG_BYTE("\n"); // 每64字符换行
+                }
+                if (response_len % 64 != 0)
+                    LOG_BYTE("\n");
+                LOG_BYTE("===============================================\n");
+            }
+
+            // 发送缓存响应给客户端
+            sendto(client_socket, buffer, response_len, 0, (struct sockaddr *)&original_client, address_length);
         }
-
-        return;
-    }
-    else // 缓存未命中
-    {
+    } else {
         printf("Cache miss for: %s, forwarding to remote DNS\n", query_name);
 
         // 查找空闲槽位
@@ -533,11 +549,10 @@ void receiveClient() {
 }
 
 void receiveServer() { 
-    int remote_addr_len = sizeof(server_addr);
-    int remote_recvLen = recvfrom(server_sock, buffer, BUF_SIZE, 0, (struct sockaddr *)&server_addr, &remote_addr_len);
+    int remote_addr_len = sizeof(server_address);
+    int remote_recvLen = recvfrom(server_socket, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_address, &remote_addr_len);
 
-    if (remote_recvLen > 0)
-    {
+    if (remote_recvLen > 0) {
         printf("Received response from remote DNS, length = %d bytes\n", remote_recvLen);
 
         // 获取服务器响应中的事务ID
@@ -572,38 +587,32 @@ void receiveServer() {
         parse_dns_packet(&response_msg, buffer, remote_recvLen);
 
         char *query_name = NULL;
-        if (response_msg.header->ques_num > 0 && response_msg.question != NULL)
-        {
+        if (response_msg.header->ques_num > 0 && response_msg.question != NULL) {
             query_name = response_msg.question[0].qname;
         }
 
         // 缓存远程服务器的响应（Answer Section）
-        if (query_name != NULL && response_msg.header->ans_num > 0 && response_msg.answer != NULL)
-        {
-            for (int i = 0; i < response_msg.header->ans_num; i++)
-            {
+        if (query_name != NULL && response_msg.header->ans_num > 0 && response_msg.answer != NULL) {
+            for (int i = 0; i < response_msg.header->ans_num; i++) {
                 DNS_resource_record *rr = &response_msg.answer[i];
 
-                if (rr->type == RR_A)
-                {
+                if (rr->type == RR_A) {
                     uint32_t ipv4_addr;
                     memcpy(&ipv4_addr, rr->data.a_record.IP_addr, 4);
                     // 使用资源记录的实际名称作为缓存键，而不是查询名称
-                    add_to_cache(dns_cache, rr->name, RR_A, &ipv4_addr, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_A, &ipv4_addr, rr->ttl);
                     printf("Cached A record: %s -> %d.%d.%d.%d, TTL: %u\n", rr->name, rr->data.a_record.IP_addr[0], rr->data.a_record.IP_addr[1],
                            rr->data.a_record.IP_addr[2], rr->data.a_record.IP_addr[3], rr->ttl);
                 }
-                else if (rr->type == RR_AAAA)
-                {
+                else if (rr->type == RR_AAAA) {
                     uint8_t ipv6_addr[16];
                     memcpy(&ipv6_addr, rr->data.aaaa_record.IP_addr, 16);
-                    add_to_cache(dns_cache, rr->name, RR_AAAA, &ipv6_addr, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_AAAA, &ipv6_addr, rr->ttl);
                     printf("Cached AAAA record: %s -> [IPv6], TTL: %u\n", rr->name, rr->ttl);
                 }
-                else if (rr->type == RR_CNAME)
-                {
+                else if (rr->type == RR_CNAME) {
                     // 缓存CNAME记录
-                    add_to_cache(dns_cache, rr->name, RR_CNAME, rr->data.cname_record.name, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_CNAME, rr->data.cname_record.name, rr->ttl);
                     printf("Cached Additional CNAME record: %s -> %s, TTL: %u\n", rr->name, rr->data.cname_record.name, rr->ttl);
                 }
             }
@@ -621,7 +630,7 @@ void receiveServer() {
                 {
                     uint32_t ipv4_addr;
                     memcpy(&ipv4_addr, rr->data.a_record.IP_addr, 4);
-                    add_to_cache(dns_cache, rr->name, RR_A, &ipv4_addr, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_A, &ipv4_addr, rr->ttl);
                     printf("Cached Additional A record: %s -> %d.%d.%d.%d, TTL: %u\n", rr->name, rr->data.a_record.IP_addr[0],
                            rr->data.a_record.IP_addr[1], rr->data.a_record.IP_addr[2], rr->data.a_record.IP_addr[3], rr->ttl);
                 }
@@ -629,19 +638,19 @@ void receiveServer() {
                 {
                     uint8_t ipv6_addr[16];
                     memcpy(&ipv6_addr, rr->data.aaaa_record.IP_addr, 16);
-                    add_to_cache(dns_cache, rr->name, RR_AAAA, &ipv6_addr, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_AAAA, &ipv6_addr, rr->ttl);
                     printf("Cached Additional AAAA record: %s -> [IPv6], TTL: %u\n", rr->name, rr->ttl);
                 }
                 else if (rr->type == RR_CNAME)
                 {
-                    add_to_cache(dns_cache, rr->name, RR_CNAME, rr->data.cname_record.name, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_CNAME, rr->data.cname_record.name, rr->ttl);
                     printf("Cached Additional CNAME record: %s -> %s, TTL: %u\n", rr->name, rr->data.cname_record.name, rr->ttl);
                 }
             }
         }
 
         // 将响应返回给原始客户端
-        sendto(client_sock, buffer, remote_recvLen, 0, (struct sockaddr *)&original_client, addr_len);
+        sendto(client_socket, buffer, remote_recvLen, 0, (struct sockaddr *)&original_client, address_length);
 
         // 释放槽位
         ID_used[slot] = false;
