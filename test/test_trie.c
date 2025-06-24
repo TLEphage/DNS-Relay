@@ -1,7 +1,12 @@
+/*
+gcc src\trie.c test\test_trie.c -o test\test_trie.exe
+*/
+
 #include "../src/trie.h"
 
 const uint8_t A[]={1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4};
 const char web1[]="www.baidu.com";
+const char web2[]="www.google.com";
 
 int main() {
     /*
@@ -77,7 +82,7 @@ int main() {
     memcpy(temp.domain,web1,sizeof(web1));
     temp.expire_time=100;
     temp.type=1;
-    temp.addr.ipv4=111;
+    temp.value.ipv4=111;
     temp.trie_next=NULL;
     temp.trie_prev=NULL;
     temp.lru_next=NULL;
@@ -87,13 +92,20 @@ int main() {
     memcpy(a,&temp,sizeof(DNSRecord));
 
     temp.type=2;
-    memcpy(temp.addr.ipv6,A,sizeof(temp.addr.ipv6));
+    memcpy(temp.value.ipv6,A,sizeof(temp.value.ipv6));
     DNSRecord* b=malloc(sizeof(DNSRecord));
     memcpy(b,&temp,sizeof(DNSRecord));
+
+    memcpy(temp.domain,web2,sizeof(web1));
+    temp.type=1;
+    temp.value.ipv4=222;
+    DNSRecord* c=malloc(sizeof(DNSRecord));
+    memcpy(c,&temp,sizeof(DNSRecord));
 
     TrieNode* root = trie_create();
     trie_insert(root, a->domain, a);
     trie_insert(root, b->domain, b);
+    trie_insert(root, c->domain, c);
     trie_print(root, "www.baidu.com");
     printf("done\n");
 

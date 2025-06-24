@@ -4,12 +4,34 @@
 
 #include "trie.h"
 
+DNSRecord* DNSRecord_create(const char* domain, time_t expire_time, uint8_t type, const void* value) {
+    DNSRecord* record = (DNSRecord*)malloc(sizeof(DNSRecord));
+    memcpy(record->domain, domain, sizeof(domain));
+    record->expire_time = expire_time;
+    record->type = type;
+    if (type == RR_A) {
+        record->value.ipv4 = *(uint32_t*)value;
+    } else if (type == RR_AAAA) {
+        memcpy (record->value.ipv6, (uint8_t*)value, 16);
+    } else if (type == RR_CNAME) {
+        strncpy(record->value.cname, (char*)value, DOMAIN_MAX_LEN - 1);
+    } else {
+        free(record);
+        return NULL;
+    }
+    record->trie_next = NULL;
+    record->trie_prev = NULL;
+    record->lru_next = NULL;
+    record->lru_prev = NULL;
+    return record;
+}
+
 int DNSRecord_compare(const DNSRecord* a, const DNSRecord* b) {
     if(strcmp(a->domain, b->domain)) return 0;
     if(a->type != b->type) return 0;
-    if(a->type == RR_A && a->addr.ipv4 != b->addr.ipv4) return 0;
-    if(a->type == RR_AAAA && memcmp(a->addr.ipv6, b->addr.ipv6, 16)) return 0;
-    if(a->type == RR_CNAME && strcmp(a->addr.cname, b->addr.cname)) return 0;
+    if(a->type == RR_A && a->value.ipv4 != b->value.ipv4) return 0;
+    if(a->type == RR_AAAA && memcmp(a->value.ipv6, b->value.ipv6, 16)) return 0;
+    if(a->type == RR_CNAME && strcmp(a->value.cname, b->value.cname)) return 0;
     return 1;
 }
 
@@ -160,11 +182,10 @@ void trie_delete(TrieNode* root, const char* domain, const DNSRecord* record) {
     }
 
     node->isEnd = 0;
-    node->sum--;
 
     node = root;
+    node->sum--;
     for (int i = len - 1; i >= 0; i--) {
-        node->sum--;
         int index = -1; 
         if (domain[i]>='0' && domain[i]<='9') index = domain[i] - '0';
         else if(domain[i] >= 'a' && domain[i] <= 'z') {
@@ -183,6 +204,7 @@ void trie_delete(TrieNode* root, const char* domain, const DNSRecord* record) {
             return ;
         }
         node = node->children[index];
+        node->sum--;
     }
 }
 
@@ -228,14 +250,14 @@ void trie_print(TrieNode* root, const char* domain) {
     DNSRecord* p = node->head;
     while(p != NULL) {
         if (p->type == RR_A) {
-            printf("A: %u\n", p->addr.ipv4);
+            printf("A: %u\n", p->value.ipv4);
         } else if (p->type == RR_AAAA) {
             printf("AAAA: ");
             for (int i = 0; i < 16; i++) 
-                printf("%u", p->addr.ipv6[i]);
+                printf("%u", p->value.ipv6[i]);
             putchar('\n');
         } else if (p->type == RR_CNAME) {
-            printf("CNAME: %s\n", p->addr.cname);
+            printf("CNAME: %s\n", p->value.cname);
         }
         p = p->trie_next;
     }

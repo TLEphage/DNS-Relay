@@ -73,6 +73,7 @@ union ResourceData{
     }cname_record;
 };
 
+<<<<<<< HEAD
 //Trie树在xn那
 typedef struct TrieNode{
     struct TrieNode *children[36]; // 26字母 + 10数字
@@ -140,6 +141,8 @@ typedef struct IPDomainMapping{
 
 //IP域名映射
 
+=======
+>>>>>>> ed0a4fc810418fe96c73e0873a786bbbaf5542c2
 //转发查询
 typedef struct{
     uint16_t orig_id;//客户端原始事务id

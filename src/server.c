@@ -58,7 +58,7 @@ void poll() {
 
     while (1)
     {
-        timeoutHandle();
+        // timeoutHandle();
 
         fds[0].fd = client_socket;
         fds[0].events = POLLIN;  // POLLIN 表示可读
@@ -111,30 +111,24 @@ int build_multi_record_response(unsigned char *buffer,
                                 uint16_t transactionID,
                                 const char *query_name,
                                 uint16_t query_type,
-                                DNSRecord *first_record)
-{
-    if (!buffer || !query_name || !first_record)
-    {
+                                CacheQueryResult *first_record) {
+    if (!buffer || !query_name || !first_record) {
         return -1;
     }
-
     int offset = 0;
 
     // 计算所有记录的数量（包括CNAME记录）
     int answer_count = 0;
-    DNSRecord *current = first_record;
-    while (current)
-    {
+    CacheQueryResult *current = first_record;
+    while (current) {
         // 当查询A/AAAA记录时，如果有CNAME链，需要包含CNAME记录和最终的A/AAAA记录
-        if (current->type == query_type || ((query_type == RR_A || query_type == RR_AAAA) && current->type == RR_CNAME))
-        {
+        if (current->record->type == query_type || ((query_type == RR_A || query_type == RR_AAAA) && current->record->type == RR_CNAME)) {
             answer_count++;
         }
         current = current->next;
     }
 
-    if (answer_count == 0)
-    {
+    if (answer_count == 0) {
         return -1;
     }
 
@@ -201,17 +195,14 @@ int build_multi_record_response(unsigned char *buffer,
 
     // 3. 写入答案部分（多个记录）
     current = first_record;
-    while (current)
-    {
+    while (current) {
         // 当查询A/AAAA记录时，包含CNAME记录和最终的A/AAAA记录
-        if (current->type == query_type || ((query_type == RR_A || query_type == RR_AAAA) && current->type == RR_CNAME))
-        {
+        if (current->record->type == query_type || ((query_type == RR_A || query_type == RR_AAAA) && current->record->type == RR_CNAME)) {
             /*
             对于链表中的第一个记录，它的域名和Question中的域名相同，所以使用指针压缩。写入 0xC00C，0xC0是压缩指针标志，0x0C (十进制12) 指向DNS报文开头偏移12字节的位置，那里正好是Question部分的域名。这能节省空间。
             对于后续的记录（比如CNAME链中的第二个域名），它们的域名与原始查询不同，因此必须完整地编码写入。
             */
-            if (current == first_record)
-            {
+            if (current == first_record) {
                 // 第一个记录，使用指针压缩
                 if (offset + 2 > buf_size) {
                     return -1;
@@ -219,13 +210,10 @@ int build_multi_record_response(unsigned char *buffer,
                     
                 buffer[offset++] = 0xC0;
                 buffer[offset++] = 0x0C; // 指向偏移量12（问题部分的域名）
-            }
-            else
-            {
+            } else {
                 // 后续记录，写入完整域名
-                const char *domain_name = current->domain;
-                while (*domain_name)
-                {
+                const char *domain_name = current->record->domain;
+                while (*domain_name) {
                     char *dot = strchr(domain_name, '.');
                     int len = dot ? (dot - domain_name) : strlen(domain_name);
 
@@ -243,9 +231,10 @@ int build_multi_record_response(unsigned char *buffer,
             }
 
             // 写入TYPE, CLASS, TTL
-            if (offset + 10 > buf_size)
+            if (offset + 10 > buf_size) {
                 return -1;
-            uint16_t type = htons(current->type); // 使用当前记录的实际类型
+            }
+            uint16_t type = htons(current->record->type); // 使用当前记录的实际类型
             uint16_t class = htons(1);
             memcpy(buffer + offset, &type, 2);
             offset += 2;
@@ -253,47 +242,39 @@ int build_multi_record_response(unsigned char *buffer,
             offset += 2;
 
             time_t current_time = time(NULL);
-            uint32_t ttl = (current->expire_time > current_time) ? (current->expire_time - current_time) : 0;
+            uint32_t ttl = (current->record->expire_time > current_time) ? (current->record->expire_time - current_time) : 0;
             uint32_t ttl_net = htonl(ttl);
             memcpy(buffer + offset, &ttl_net, 4);
             offset += 4;
 
             // 写入RDLENGTH和RDATA
-            if (current->type == RR_A)
-            {
-                if (offset + 6 > buf_size)
-                    return -1;
-                uint16_t rdlength = htons(4);
+            if (current->record->type == RR_A) {
+                if (offset + 6 > buf_size) return -1;
+                uint16_t rdlength = htons(4); // A记录长度为4字节
                 memcpy(buffer + offset, &rdlength, 2);
                 offset += 2;
-                memcpy(buffer + offset, &current->data.ip_addr.addr.ipv4, 4);
+                memcpy(buffer + offset, &current->record->value.ipv4, 4);
                 offset += 4;
 
                 // 打印IP地址调试信息
-                uint32_t ip = current->data.ip_addr.addr.ipv4;
-                printf("  Added A record: %u.%u.%u.%u (TTL: %u)\n", (ip >> 24) & 0xFF, (ip >> 16) & 0xFF, (ip >> 8) & 0xFF, ip & 0xFF, ttl);
-            }
-            else if (current->type == RR_AAAA)
-            {
-                if (offset + 18 > buf_size)
-                    return -1;
-                uint16_t rdlength = htons(16);
+                uint32_t ip = current->record->value.ipv4;
+                printf("  Added a record: %u.%u.%u.%u (TTL: %u)\n", (ip >> 24) & 0xFF, (ip >> 16) & 0xFF, (ip >> 8) & 0xFF, ip & 0xFF, ttl);
+            } else if (current->type == RR_AAAA) {
+                if (offset + 18 > buf_size) return -1;
+                uint16_t rdlength = htons(16); // AAAA记录长度为16字节
                 memcpy(buffer + offset, &rdlength, 2);
                 offset += 2;
-                memcpy(buffer + offset, current->data.ip_addr.addr.ipv6, 16);
+                memcpy(buffer + offset, current->record->value.ipv6, 16);
                 offset += 16;
                 printf("  Added AAAA record (TTL: %u)\n", ttl);
-            }
-            else if (current->type == RR_CNAME)
-            {
+            } else if (current->type == RR_CNAME) {
                 // CNAME记录处理
-                const char *cname = current->data.cname;
+                const char *cname = current->record->value.cname;
                 int name_wire_len = 0;
                 const char *temp_name = cname;
 
                 // 计算编码后的域名长度
-                while (*temp_name)
-                {
+                while (*temp_name) {
                     char *dot = strchr(temp_name, '.');
                     int label_len = dot ? (dot - temp_name) : strlen(temp_name);
                     name_wire_len += label_len + 1;
@@ -332,136 +313,13 @@ int build_multi_record_response(unsigned char *buffer,
     return offset;
 }
 
-/**
- * 收集完整的CNAME链，包括CNAME记录和最终的A/AAAA记录
- * 返回一个链接的记录列表，用于构建包含CNAME的完整响应
- * 注意：这个函数创建临时链表，不会修改缓存中的记录
- */
-DNSRecord *collect_cname_chain_with_records(DNSCache *cache, const char *domain, uint16_t query_type)
-{
-    char current_domain[DOMAIN_MAX_LEN];
-    strncpy(current_domain, domain, DOMAIN_MAX_LEN - 1);
-    current_domain[DOMAIN_MAX_LEN - 1] = '\0';
-
-    int cname_depth = 0;
-    const int MAX_CNAME_DEPTH = 10; // 防止CNAME循环
-
-    DNSRecord *first_record = NULL;
-    DNSRecord *last_record = NULL;
-    bool final_record_found = false; // 新增标志位，追踪是否找到最终记录
-
-    while (cname_depth < MAX_CNAME_DEPTH)
-    {
-        DNSRecord *record = query_cache(cache, current_domain);
-        if (!record)
-        {
-            break; // 缓存中没有找到，退出循环
-        }
-
-        if (record->type == RR_CNAME)
-        {
-            // 创建CNAME记录的副本并添加到临时链表
-            DNSRecord *cname_copy = (DNSRecord *)malloc(sizeof(DNSRecord));
-            memcpy(cname_copy, record, sizeof(DNSRecord));
-            cname_copy->next = NULL; // 清除原有的next指针
-
-            if (!first_record)
-            {
-                first_record = cname_copy;
-                last_record = cname_copy;
-            }
-            else
-            {
-                last_record->next = cname_copy;
-                last_record = cname_copy;
-            }
-
-            printf("Added CNAME to chain: %s -> %s\n", current_domain, record->data.cname);
-            strncpy(current_domain, record->data.cname, DOMAIN_MAX_LEN - 1);
-            current_domain[DOMAIN_MAX_LEN - 1] = '\0';
-            cname_depth++;
-        }
-        else if (record->type == query_type)
-        {
-            // 找到目标类型的记录，收集同一域名的所有该类型记录
-            DNSRecord *current_record = record;
-            while (current_record)
-            {
-                if (current_record->type == query_type)
-                {
-                    // 创建记录的副本并添加到链表末尾
-                    DNSRecord *final_copy = (DNSRecord *)malloc(sizeof(DNSRecord));
-                    memcpy(final_copy, current_record, sizeof(DNSRecord));
-                    final_copy->next = NULL; // 清除原有的next指针
-
-                    if (!first_record)
-                    {
-                        first_record = final_copy;
-                        last_record = final_copy;
-                    }
-                    else
-                    {
-                        last_record->next = final_copy;
-                        last_record = final_copy;
-                    }
-                    printf("Added final %s record to chain: %s\n", (query_type == RR_A) ? "A" : "AAAA", current_domain);
-                }
-                current_record = current_record->next;
-            }
-            final_record_found = true; // 成功找到最终记录
-            break;                     // 找到后退出主循环
-        }
-        else
-        {
-            // 找到的记录类型不匹配
-            printf("Final domain %s has no %s record in cache\n", current_domain, (query_type == RR_A) ? "A" : "AAAA");
-            break;
-        }
-    }
-
-    if (cname_depth >= MAX_CNAME_DEPTH)
-    {
-        printf("CNAME chain too deep for %s\n", domain);
-    }
-
-    // 只有在完整解析并找到最终记录时才返回结果，否则返回NULL
-    if (final_record_found)
-    {
-        return first_record;
-    }
-    else
-    {
-        if (first_record)
-        {
-            // 如果创建了部分链但未成功，释放内存
-            free_temp_record_chain(first_record);
-        }
-        return NULL;
-    }
-}
-
-/**
- * 释放由collect_cname_chain_with_records创建的临时链表
- */
-void free_temp_record_chain(DNSRecord *first_record)
-{
-    DNSRecord *current = first_record;
-    while (current)
-    {
-        DNSRecord *next = current->next;
-        free(current);
-        current = next;
-    }
-}
-
 /*
  * 构建DNS NXDOMAIN响应（域名不存在错误）
  * 用于拦截域名时返回给客户端
  */
 int build_nxdomain_response(unsigned char *buffer, int buf_size, uint16_t transactionID, const char *query_name, uint16_t query_type)
 {
-    if (!buffer || !query_name || buf_size < 12)
-    {
+    if (!buffer || !query_name || buf_size < 12) {
         return -1;
     }
 
@@ -584,87 +442,85 @@ void receiveClient() {
     // 保存客户端地址以便后续回复
     struct sockaddr_in original_client = clientAddress;
 
-    print_cache_status(dns_cache);
+    // print_cache_status(dns_cache);
 
     // 1. 先查询缓存，支持CNAME链解析
-    DNSRecord *cached_record = NULL;
-    int is_temp_chain = 0; // 标记是否为临时链表
-
-    if (query_name != NULL && (msg.question->qtype == RR_A || msg.question->qtype == RR_AAAA || msg.question->qtype == RR_CNAME))
-    {
-        if (msg.question->qtype == RR_CNAME)
-        {
-            // 直接查询CNAME记录
-            cached_record = query_cache_all_records(dns_cache, query_name, RR_CNAME);
-        }
-        else
-        {
-            // A/AAAA记录使用新的多记录查询
-            cached_record = query_cache_all_records(dns_cache, query_name, msg.question->qtype);
-            if (!cached_record)
-            {
-                // 如果没有直接的A/AAAA记录，尝试收集完整的CNAME链
-                cached_record = collect_cname_chain_with_records(dns_cache, query_name, msg.question->qtype);
-                is_temp_chain = 1; // 标记为临时链表
-            }
-        }
-    }
+    CacheQueryResult* query_res;
+    query_res = cache_query(dns_cache, query_name, msg.question->qtype);
 
     // 2. 如果缓存命中
-    if (cached_record != NULL)
-    {
+    if (query_res != NULL) {
         printf("Cache hit for: %s\n", query_name);
 
-        // 使用多记录响应构建函数
-        int response_len = build_multi_record_response((unsigned char *)buffer, BUF_SIZE, client_txid, query_name, query_type, cached_record);
-
-        // 如果是CNAME或者RR_A查询，打印要发送的字节数据
-        if ((query_type == RR_CNAME || query_type == RR_A) && response_len > 0)
-        {
-            LOG_BYTE("=== CNAME Response Bytes Debug (Length: %d) ===\n", response_len);
-            for (int i = 0; i < response_len; i++)
-            {
-                LOG_BYTE("%02X ", (unsigned char)buffer[i]);
-                if ((i + 1) % 16 == 0)
-                    LOG_BYTE("\n"); // 每16字节换行
+        // 先判断ip地址中是否有0.0.0.0的不良记录需要拦截
+        CacheQueryResult *current = query_res;
+        bool is_blocked = false;
+        while (current != NULL) {
+            if (current->record->type == RR_A && strcmp(current->record->value, "0.0.0.0") == 0) {
+                is_blocked = true;
+                break;
+            } else if(current->record->type == RR_AAAA && strcmp(current->record->value, "::") == 0) {
+                is_blocked = true;
+                break;
             }
-            if (response_len % 16 != 0)
-                LOG_BYTE("\n"); // 最后一行换行
-
-            // 也打印ASCII可读部分
-            LOG_BYTE("ASCII representation:\n");
-            for (int i = 0; i < response_len; i++)
-            {
-                char c = buffer[i];
-                if (c >= 32 && c <= 126)
-                {
-                    LOG_BYTE("%c", c);
-                }
-                else
-                {
-                    LOG_BYTE(".");
-                }
-                if ((i + 1) % 64 == 0)
-                    LOG_BYTE("\n"); // 每64字符换行
-            }
-            if (response_len % 64 != 0)
-                LOG_BYTE("\n");
-            LOG_BYTE("===============================================\n");
+            current = current->next;
         }
 
-        // 发送缓存响应给客户端
-        sendto(client_sock, buffer, response_len, 0, (struct sockaddr *)&original_client, addr_len);
+        if (is_blocked) {
+            printf("Domain %s is BLOCKED, returning NXDOMAIN response\n", query_name);
 
-        // 如果使用了临时链表，需要释放
-        if (is_temp_chain)
-        {
-            free_temp_record_chain(cached_record);
+            // 构建NXDOMAIN响应
+            int response_len = build_nxdomain_response((unsigned char *)buffer, BUFFER_SIZE, transactionID, query_name, query_type);
+            if (response_len > 0) {
+                // 发送NXDOMAIN响应给客户端
+                sendto(client_socket, buffer, response_len, 0, (struct sockaddr *)&original_client, address_length);
+                printf("Sent NXDOMAIN response for blocked domain: %s\n", query_name);
+            } else {
+                printf("Failed to build NXDOMAIN response for: %s\n", query_name);
+            }
+            return ;
+        } else {
+            // 使用多记录响应构建函数
+            int response_len = build_multi_record_response((unsigned char *)buffer, BUFFER_SIZE, client_txid, query_name, query_type, query_res);
+
+            // 如果是CNAME或者RR_A查询，打印要发送的字节数据
+            if ((query_type == RR_CNAME || query_type == RR_A) && response_len > 0)
+            {
+                LOG_BYTE("=== CNAME Response Bytes Debug (Length: %d) ===\n", response_len);
+                for (int i = 0; i < response_len; i++)
+                {
+                    LOG_BYTE("%02X ", (unsigned char)buffer[i]);
+                    if ((i + 1) % 16 == 0)
+                        LOG_BYTE("\n"); // 每16字节换行
+                }
+                if (response_len % 16 != 0)
+                    LOG_BYTE("\n"); // 最后一行换行
+
+                // 也打印ASCII可读部分
+                LOG_BYTE("ASCII representation:\n");
+                for (int i = 0; i < response_len; i++)
+                {
+                    char c = buffer[i];
+                    if (c >= 32 && c <= 126)
+                    {
+                        LOG_BYTE("%c", c);
+                    }
+                    else
+                    {
+                        LOG_BYTE(".");
+                    }
+                    if ((i + 1) % 64 == 0)
+                        LOG_BYTE("\n"); // 每64字符换行
+                }
+                if (response_len % 64 != 0)
+                    LOG_BYTE("\n");
+                LOG_BYTE("===============================================\n");
+            }
+
+            // 发送缓存响应给客户端
+            sendto(client_socket, buffer, response_len, 0, (struct sockaddr *)&original_client, address_length);
         }
-
-        return;
-    }
-    else
-    {
+    } else {
         printf("Cache miss for: %s, forwarding to remote DNS\n", query_name);
 
         // 查找空闲槽位
@@ -688,16 +544,15 @@ void receiveClient() {
         buffer[1] = new_txid & 0xFF;
 
         // 转发请求到远程DNS服务器
-        sendto(server_sock, buffer, recvLen, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
+        sendto(server_socket, buffer, recv_len, 0, (struct sockaddr *)&server_address, sizeof(server_address));
     }
 }
 
 void receiveServer() { 
-    int remote_addr_len = sizeof(server_addr);
-    int remote_recvLen = recvfrom(server_sock, buffer, BUF_SIZE, 0, (struct sockaddr *)&server_addr, &remote_addr_len);
+    int remote_addr_len = sizeof(server_address);
+    int remote_recvLen = recvfrom(server_socket, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_address, &remote_addr_len);
 
-    if (remote_recvLen > 0)
-    {
+    if (remote_recvLen > 0) {
         printf("Received response from remote DNS, length = %d bytes\n", remote_recvLen);
 
         // 获取服务器响应中的事务ID
@@ -732,38 +587,32 @@ void receiveServer() {
         parse_dns_packet(&response_msg, buffer, remote_recvLen);
 
         char *query_name = NULL;
-        if (response_msg.header->ques_num > 0 && response_msg.question != NULL)
-        {
+        if (response_msg.header->ques_num > 0 && response_msg.question != NULL) {
             query_name = response_msg.question[0].qname;
         }
 
         // 缓存远程服务器的响应（Answer Section）
-        if (query_name != NULL && response_msg.header->ans_num > 0 && response_msg.answer != NULL)
-        {
-            for (int i = 0; i < response_msg.header->ans_num; i++)
-            {
+        if (query_name != NULL && response_msg.header->ans_num > 0 && response_msg.answer != NULL) {
+            for (int i = 0; i < response_msg.header->ans_num; i++) {
                 DNS_resource_record *rr = &response_msg.answer[i];
 
-                if (rr->type == RR_A)
-                {
+                if (rr->type == RR_A) {
                     uint32_t ipv4_addr;
                     memcpy(&ipv4_addr, rr->data.a_record.IP_addr, 4);
                     // 使用资源记录的实际名称作为缓存键，而不是查询名称
-                    add_to_cache(dns_cache, rr->name, RR_A, &ipv4_addr, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_A, &ipv4_addr, rr->ttl);
                     printf("Cached A record: %s -> %d.%d.%d.%d, TTL: %u\n", rr->name, rr->data.a_record.IP_addr[0], rr->data.a_record.IP_addr[1],
                            rr->data.a_record.IP_addr[2], rr->data.a_record.IP_addr[3], rr->ttl);
                 }
-                else if (rr->type == RR_AAAA)
-                {
+                else if (rr->type == RR_AAAA) {
                     uint8_t ipv6_addr[16];
                     memcpy(&ipv6_addr, rr->data.aaaa_record.IP_addr, 16);
-                    add_to_cache(dns_cache, rr->name, RR_AAAA, &ipv6_addr, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_AAAA, &ipv6_addr, rr->ttl);
                     printf("Cached AAAA record: %s -> [IPv6], TTL: %u\n", rr->name, rr->ttl);
                 }
-                else if (rr->type == RR_CNAME)
-                {
+                else if (rr->type == RR_CNAME) {
                     // 缓存CNAME记录
-                    add_to_cache(dns_cache, rr->name, RR_CNAME, rr->data.cname_record.name, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_CNAME, rr->data.cname_record.name, rr->ttl);
                     printf("Cached Additional CNAME record: %s -> %s, TTL: %u\n", rr->name, rr->data.cname_record.name, rr->ttl);
                 }
             }
@@ -781,7 +630,7 @@ void receiveServer() {
                 {
                     uint32_t ipv4_addr;
                     memcpy(&ipv4_addr, rr->data.a_record.IP_addr, 4);
-                    add_to_cache(dns_cache, rr->name, RR_A, &ipv4_addr, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_A, &ipv4_addr, rr->ttl);
                     printf("Cached Additional A record: %s -> %d.%d.%d.%d, TTL: %u\n", rr->name, rr->data.a_record.IP_addr[0],
                            rr->data.a_record.IP_addr[1], rr->data.a_record.IP_addr[2], rr->data.a_record.IP_addr[3], rr->ttl);
                 }
@@ -789,143 +638,21 @@ void receiveServer() {
                 {
                     uint8_t ipv6_addr[16];
                     memcpy(&ipv6_addr, rr->data.aaaa_record.IP_addr, 16);
-                    add_to_cache(dns_cache, rr->name, RR_AAAA, &ipv6_addr, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_AAAA, &ipv6_addr, rr->ttl);
                     printf("Cached Additional AAAA record: %s -> [IPv6], TTL: %u\n", rr->name, rr->ttl);
                 }
                 else if (rr->type == RR_CNAME)
                 {
-                    add_to_cache(dns_cache, rr->name, RR_CNAME, rr->data.cname_record.name, rr->ttl);
+                    cache_update(dns_cache, rr->name, RR_CNAME, rr->data.cname_record.name, rr->ttl);
                     printf("Cached Additional CNAME record: %s -> %s, TTL: %u\n", rr->name, rr->data.cname_record.name, rr->ttl);
                 }
             }
         }
 
         // 将响应返回给原始客户端
-        sendto(client_sock, buffer, remote_recvLen, 0, (struct sockaddr *)&original_client, addr_len);
+        sendto(client_socket, buffer, remote_recvLen, 0, (struct sockaddr *)&original_client, address_length);
 
         // 释放槽位
         ID_used[slot] = false;
-    }
-}
-
-/**
- * 释放由collect_cname_chain_with_records创建的临时链表
- */
-void free_temp_record_chain(DNSRecord *first_record)
-{
-    DNSRecord *current = first_record;
-    while (current)
-    {
-        DNSRecord *next = current->next;
-        free(current);
-        current = next;
-    }
-}
-
-/**
- * 收集完整的CNAME链，包括CNAME记录和最终的A/AAAA记录
- * 返回一个链接的记录列表，用于构建包含CNAME的完整响应
- * 注意：这个函数创建临时链表，不会修改缓存中的记录
- */
-DNSRecord *collect_cname_chain_with_records(DNSCache *cache, const char *domain, uint16_t query_type)
-{
-    char current_domain[DOMAIN_MAX_LEN];
-    strncpy(current_domain, domain, DOMAIN_MAX_LEN - 1);
-    current_domain[DOMAIN_MAX_LEN - 1] = '\0';
-
-    int cname_depth = 0;
-    const int MAX_CNAME_DEPTH = 10; // 防止CNAME循环
-
-    DNSRecord *first_record = NULL;
-    DNSRecord *last_record = NULL;
-    bool final_record_found = false; // 新增标志位，追踪是否找到最终记录
-
-    while (cname_depth < MAX_CNAME_DEPTH)
-    {
-        DNSRecord *record = query_cache(cache, current_domain);
-        if (!record)
-        {
-            break; // 缓存中没有找到，退出循环
-        }
-
-        if (record->type == RR_CNAME)
-        {
-            // 创建CNAME记录的副本并添加到临时链表
-            DNSRecord *cname_copy = (DNSRecord *)malloc(sizeof(DNSRecord));
-            memcpy(cname_copy, record, sizeof(DNSRecord));
-            cname_copy->next = NULL; // 清除原有的next指针
-
-            if (!first_record)
-            {
-                first_record = cname_copy;
-                last_record = cname_copy;
-            }
-            else
-            {
-                last_record->next = cname_copy;
-                last_record = cname_copy;
-            }
-
-            printf("Added CNAME to chain: %s -> %s\n", current_domain, record->data.cname);
-            strncpy(current_domain, record->data.cname, DOMAIN_MAX_LEN - 1);
-            current_domain[DOMAIN_MAX_LEN - 1] = '\0';
-            cname_depth++;
-        }
-        else if (record->type == query_type)
-        {
-            // 找到目标类型的记录，收集同一域名的所有该类型记录
-            DNSRecord *current_record = record;
-            while (current_record)
-            {
-                if (current_record->type == query_type)
-                {
-                    // 创建记录的副本并添加到链表末尾
-                    DNSRecord *final_copy = (DNSRecord *)malloc(sizeof(DNSRecord));
-                    memcpy(final_copy, current_record, sizeof(DNSRecord));
-                    final_copy->next = NULL; // 清除原有的next指针
-
-                    if (!first_record)
-                    {
-                        first_record = final_copy;
-                        last_record = final_copy;
-                    }
-                    else
-                    {
-                        last_record->next = final_copy;
-                        last_record = final_copy;
-                    }
-                    printf("Added final %s record to chain: %s\n", (query_type == RR_A) ? "A" : "AAAA", current_domain);
-                }
-                current_record = current_record->next;
-            }
-            final_record_found = true; // 成功找到最终记录
-            break;                     // 找到后退出主循环
-        }
-        else
-        {
-            // 找到的记录类型不匹配
-            printf("Final domain %s has no %s record in cache\n", current_domain, (query_type == RR_A) ? "A" : "AAAA");
-            break;
-        }
-    }
-
-    if (cname_depth >= MAX_CNAME_DEPTH)
-    {
-        printf("CNAME chain too deep for %s\n", domain);
-    }
-
-    // 只有在完整解析并找到最终记录时才返回结果，否则返回NULL
-    if (final_record_found)
-    {
-        return first_record;
-    }
-    else
-    {
-        if (first_record)
-        {
-            // 如果创建了部分链但未成功，释放内存
-            free_temp_record_chain(first_record);
-        }
-        return NULL;
     }
 }
