@@ -73,61 +73,6 @@ union ResourceData{
     }cname_record;
 };
 
-//Trie树在xn那
-typedef struct TrieNode{
-    struct TrieNode *children[36]; // 26字母 + 10数字
-    DNSRecord *record;
-    int is_end;//是否是域名结尾
-}TrieNode;
-
-typedef struct node{
-    uint16_t type;
-    char domain[DOMAIN_MAX_LEN];//域名
-
-    union{
-        IPAdress ip_addr;
-        char cname[DOMAIN_MAX_LEN];
-    }data;
-
-    time_t expire_time; // 过期时间
-    time_t last_used;//最后使用时间{LRU用}
-
-    struct node*next;
-    struct node*lru_prev,*lru_next; // LRU链表指针
-}DNSRecord;
-
-/*IP地址结构体*/
-typedef struct ip_address{
-    uint8_t type;
-    union{
-        uint32_t ipv4;
-        uint8_t ipv6[16];
-    }addr;
-}IPAdress;
-
-typedef struct IPDomainMapping{
-    char domain[DOMAIN_MAX_LEN];//域名
-    IPAdress ip_addr;//IP地址
-    time_t expire_time; // 过期时间
-    time_t last_used;//最后使用时间{LRU用}
-    struct IPDomainMapping *next; // 链表指针
-
-}IPDomainMapping;
-//DNS缓存
-    typedef struct DNSCache{
-        TrieNode *root;
-        DNSRecord *lru_head; // LRU链表头
-        DNSRecord *lru_tail; // LRU链表尾
-        int capacity; // 缓存容量
-        int size;   // 当前缓存大小
-        IPDomainMapping *ip_domain_head; // IP域名映射表头
-        IPDomainMapping *ip_domain_tail; // IP域名映射表尾
-    }DNSCache;
-
-    DNSCache *dns_cache;
-
-//IP域名映射
-
 //转发查询
 typedef struct{
     uint16_t orig_id;//客户端原始事务id
