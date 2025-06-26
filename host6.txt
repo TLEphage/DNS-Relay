@@ -1,0 +1,17 @@
+# IPv6 host file
+# Format: IPv6_ADDRESS DOMAIN_NAME [ALIAS...]
+
+# Normal DNS entries
+2001:4860:4860::8888 ipv6.google.com
+2606:4700:4700::1111 ipv6.cloudflare-dns.com
+fe80::1 local.router.ipv6
+
+# Blocked domains (:: indicates blocking)
+:: malware.ipv6.example.com
+:: ads.tracker.ipv6.com
+:: bad.ipv6.site.net
+
+# More normal entries
+2001:db8:85a3::8a2e:370:7334 example.ipv6.com
+2001:db8::1 test.ipv6.local
+
