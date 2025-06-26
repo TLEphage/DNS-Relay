@@ -40,4 +40,6 @@ void cache_query_free(CacheQueryResult* result);
 
 void cache_destroy(DNSCache* cache);
 
+void cache_print_status(DNSCache* cache);
+
 #endif // CACHE_H

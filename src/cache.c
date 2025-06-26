@@ -177,3 +177,18 @@ void cache_print(DNSCache* cache) {
         p = p->lru_next;
     }
 }
+
+void cache_print_status(DNSCache* cache) {
+    const int DOMAIN_WIDTH = 40;
+    const int TYPE_WIDTH = 2;
+
+    // 打印缓存状态
+    printf("Cache Status: %d / %d\n", cache->size, cache->capacity);
+    printf("================================ Cache Status ================================\n");
+    DNSRecord* p = cache->head;
+    while (p) {
+        printf("| domain: %-*s type: %*d              -> |\n", DOMAIN_WIDTH, p->domain, TYPE_WIDTH, p->type);
+        p = p->lru_next;
+    }
+    printf("=============================================================================\n");
+}
