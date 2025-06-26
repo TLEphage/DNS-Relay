@@ -1,6 +1,3 @@
-#ifndef RESPONSE_H
-#define RESPONSE_H
-
 #pragma once
 
 #include <WinSock2.h>
@@ -24,5 +21,3 @@ int build_multi_record_response(unsigned char *buffer,
                                 CacheQueryResult *first_record);
 
 int build_nxdomain_response(unsigned char *buffer, int buf_size, uint16_t transactionID, const char *query_name, uint16_t query_type);
-
-#endif

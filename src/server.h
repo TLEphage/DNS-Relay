@@ -1,6 +1,3 @@
-#ifndef SERVER_H
-#define SERVER_H
-
 #pragma once
 
 #define _WIN32_WINNT 0x0602
@@ -47,5 +44,3 @@ void init_socket(int port);
 void poll();
 void receiveClient();
 void receiveServer();
-
-#endif
