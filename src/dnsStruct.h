@@ -98,42 +98,6 @@ typedef struct DNS_message{
 void parse_dns_packet(DNS_message *msg,const char *buffer,int length);
 void parse_resource_record(const char*buffer,int *offset,int max_length,DNS_resource_record *rr);
 
-
-/*IP地址结构体*/
-/*
-typedef struct {
-    uint8_t type;
-    union{
-        uint32_t ipv4;
-        uint8_t ipv6[16];
-    }addr;
-    int isFilledIp4;	// 是否为IPv4地址
-	int isFilledIp6;	// 是否为IPv6地址
-    struct IPAdress *next; // 下一条ip地址
-}IPAdress;
-*/
-
-
-/* ID转换结构体 */
-// typedef struct {
-// 	uint16_t client_ID;				// 客户端ID
-// 	int expire_time;				// 过期时间
-// 	struct DNS_message* msg;		// DNS报文
-// 	int msg_size;					// 报文大小
-// 	struct sockaddr_in client_addr;	// 客户端地址
-// } ID_conversion;
-
-// typedef struct IPDomainMapping{
-//     char domain[DOMAIN_MAX_LEN];//域名
-    
-//     time_t expire_time; // 过期时间
-//     time_t last_used;//最后使用时间{LRU用}
-//     struct IPDomainMapping *next; // 链表指针
-
-// }IPDomainMapping;
-
-
-
 //转发查询
 typedef struct{
     uint16_t orig_id;//客户端原始事务id

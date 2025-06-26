@@ -17,7 +17,7 @@ typedef struct DNSCache {
     int capacity;   // 最大容量
 }DNSCache;
 
-extern DNSCache* dns_cache;
+DNSCache* dns_cache;
 
 typedef struct CacheQueryResult {
     DNSRecord* record;
