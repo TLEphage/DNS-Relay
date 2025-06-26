@@ -1,6 +1,9 @@
 #include "server.h"
 
-
+void init() {
+    init_socket(PORT);
+    init_DNS();
+}
 
 
 void init_socket(int port) {
@@ -40,6 +43,49 @@ void init_socket(int port) {
     printf("| DNS server: %-12s                                       |\n", remote_dns);
     printf("| Listening on port %-12d                                 |\n", port);
     printf("==================================================================\n");
+}
+
+int ip_str_to_bytes_sscanf(const char* ip_str, uint8_t* bytes) {
+    if (!ip_str || !bytes)
+        return -1;
+
+    unsigned int b0, b1, b2, b3;
+    if (sscanf(ip_str, "%u.%u.%u.%u", &b0, &b1, &b2, &b3) != 4) {
+        return -1;
+    }
+
+    // 检查每个字节是否在0-255范围内
+    if (b0 > 255 || b1 > 255 || b2 > 255 || b3 > 255) {
+        return -1;
+    }
+
+    bytes[0] = (uint8_t)b0;
+    bytes[1] = (uint8_t)b1;
+    bytes[2] = (uint8_t)b2;
+    bytes[3] = (uint8_t)b3;
+
+    return 0;
+}
+
+
+void init_DNS(void) {
+    dns_cache = cache_create(1024);
+    remote_dns = "202.106.0.20";
+
+    // 从 hosts 文件初始化 DNS 缓存和拦截表
+    init_hosts_to_dns_cache();
+
+    // 先手动添加一个默认的DNS记录（作为备用）
+    uint32_t ipv4;
+    inet_pton(AF_INET, "192.168.1.1", &ipv4);
+    ip_str_to_bytes_sscanf("192.168.1.1", (uint8_t*)&ipv4);
+    // printf("ipv4 %u\n", ipv4);
+    cache_update(dns_cache, "example.com", RR_A, &ipv4, 3600);
+
+    uint8_t ipv6[16];
+    // 将文本形式的 IP 地址转换为二进制形式的函数
+    inet_pton(AF_INET6, "2001:db8:85a3:0000:0000:8a2e:370:7334", ipv6);
+    cache_update(dns_cache, "ipv.example.com", RR_AAAA, ipv6, 7200);
 }
 
 void poll() {

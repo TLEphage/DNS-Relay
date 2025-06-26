@@ -23,10 +23,7 @@ int main(int argc, char* argv[]) {
 
     print_project_info();
 
-    dns_cache = cache_create(1024);
-    remote_dns = "202.106.0.20";
-
-    init_socket(PORT);
+    init();
 
     poll();
 

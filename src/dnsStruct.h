@@ -1,12 +1,14 @@
 #pragma once
 
 
-#include<stdint.h>
-#include<stdlib.h>
-#include<string.h>
-#include<stdio.h>
-#include<stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdbool.h>
 #include <winsock2.h>
+#include <time.h>
+
 // #include <arpa/inet.h> // Not available on Windows
 #define MAX_BLACKLIST_SIZE 1000
 #define DOMAIN_MAX_LEN 256
