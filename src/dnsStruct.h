@@ -128,6 +128,7 @@ typedef struct {
 // }IPDomainMapping;
 
 //DNS缓存
+<<<<<<< HEAD
 /*
     typedef struct DNSCache{
         TrieNode *root;
@@ -141,6 +142,19 @@ typedef struct {
 
     DNSCache *dns_cache;
 */
+=======
+typedef struct DNSCache{
+    TrieNode *root;
+    DNSRecord *lru_head; // LRU链表头
+    DNSRecord *lru_tail; // LRU链表尾
+    int capacity; // 缓存容量
+    int size;   // 当前缓存大小
+    IPDomainMapping *ip_domain_head; // IP域名映射表头
+    IPDomainMapping *ip_domain_tail; // IP域名映射表尾
+} DNSCache;
+
+DNSCache *dns_cache;
+>>>>>>> 8b8e9e9de93b8ccfc964c4dda9272ae6a4dfcdcc
 
 //IP域名映射
 
@@ -162,20 +176,20 @@ typedef struct{
 
 IDTable *id_table;
 
-/*域名拦截表*/
-typedef struct BlackListEntry{
-    char domain[DOMAIN_MAX_LEN];//被拦截的域名
+// /*域名拦截表*/
+// typedef struct BlackListEntry{
+//     char domain[DOMAIN_MAX_LEN];//被拦截的域名
 
-    time_t added_time;           //添加到拦截表的时间
-}BlackListEntry;
+//     time_t added_time;           //添加到拦截表的时间
+// }BlackListEntry;
 
-typedef struct DomainBlakcList{
-    BlackListEntry entries[MAX_BLACKLIST_SIZE];
-    int count;//当前拦截域名数量
-}DomainBlackList;
+// typedef struct DomainBlakcList{
+//     BlackListEntry entries[MAX_BLACKLIST_SIZE];
+//     int count;//当前拦截域名数量
+// }DomainBlackList;
 
-//全局拦截表
-extern DomainBlackList *domain_blacklist;
+// //全局拦截表
+// extern DomainBlackList *domain_blacklist;
 
 //日志等级
 typedef enum{
@@ -188,3 +202,35 @@ typedef enum{
 void transferIp(char* originIP, uint8_t* transIP);
 void transferIp6(char* originIP, uint16_t* transIP);
 int hex_to_int(char c);
+
+
+#define MAX_INFLIGHT 1024   // 最大并发未完成转发请求数
+#define QUERY_TIMEOUT_SEC 5 // 超时未得到上游响应
+
+IDEntry ID_list[MAX_INFLIGHT];
+bool ID_used[MAX_INFLIGHT];
+
+int find_free_slot(void)
+{
+    for (int i = 0; i < MAX_INFLIGHT; i++)
+    {
+        if (!ID_used[i])
+        {
+            return i;
+        }
+    }
+    return -1; // 没有空闲槽，表示并发已满
+}
+
+void cleanup_timeouts(void)
+{
+    time_t now = time(NULL);
+    for (int i = 0; i < MAX_INFLIGHT; i++)
+    {
+        if (ID_used[i] && now - ID_list[i].timestamp > QUERY_TIMEOUT_SEC)
+        {
+            ID_used[i] = false;
+            printf("Cleaning up timed out request for slot %d\n", i);
+        }
+    }
+}
