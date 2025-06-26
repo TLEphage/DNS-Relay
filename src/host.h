@@ -4,8 +4,8 @@
 #include <ws2tcpip.h>
 #include "cache.h"
 // 默认的 hosts 文件路径
-#define HOST_FILE_PATH "dnsrelay.txt"
-#define HOST6_FILE_PATH "host6.txt"
+#define IPV4_FILE_PATH "dnsrelay.txt"
+#define IPV6_FILE_PATH "dnsrelay_ipv6.txt"
 
 // hosts 文件解析结果统计
 typedef struct HostsStats {

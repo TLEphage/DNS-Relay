@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (log_level > LOG_LEVEL_NONE) {  // 日志初始化
-        log_init("dnsserver.log");
+        log_init("dnsrelay.log");
         LOG_INFO("Log level = %d\n", log_level);
     }
 

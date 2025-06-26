@@ -183,12 +183,12 @@ void init_hosts_to_dns_cache() {
     }
     
     // 加载 IPv4 hosts 文件
-    if (load_hosts_file(HOST_FILE_PATH, 0) == 0) {
+    if (load_hosts_file(IPV4_FILE_PATH, 0) == 0) {
         printf("Successfully loaded IPv4 hosts file\n");
     }
     
     // 加载 IPv6 hosts 文件
-    if (load_hosts_file(HOST6_FILE_PATH, 1) == 0) {
+    if (load_hosts_file(IPV6_FILE_PATH, 1) == 0) {
         printf("Successfully loaded IPv6 hosts file\n");
     }
     
@@ -209,7 +209,6 @@ void print_hosts_stats(HostsStats stats) {
     printf("Error lines: %d\n", stats.error_lines);
     printf("IPv4 entries: %d\n", stats.ipv4_entries);
     printf("IPv6 entries: %d\n", stats.ipv6_entries);
-    printf("Blocked entries: %d\n", stats.blocked_entries);
     printf("Total entries: %d\n", stats.ipv4_entries + stats.ipv6_entries + stats.blocked_entries);
     printf("=====================================\n\n");
 }

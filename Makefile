@@ -58,7 +58,7 @@ clean:
 	@echo "Cleaning build files..."
 	@if exist "$(OBJ_DIR)" rmdir /s /q "$(OBJ_DIR)"
 	@if exist "$(TARGET)" del "$(TARGET)"
-	@if exist "dnsserver.log" del "dnsserver.log"
+	@if exist "dnsrelay.log" del "dnsrelay.log"
 	@echo "Clean complete."
 
 # 重新构建

@@ -107,7 +107,7 @@ make debug
 2. **依赖库**: 
    - Windows: 需要ws2_32库 (通常系统自带)
    - Linux: 无额外依赖
-3. **配置文件**: dnsrelay.txt和host6.txt在两个平台上格式相同
+3. **配置文件**: dnsrelay.txt和dnsrelay_ipv6.txt在两个平台上格式相同
 
 ### 📝 使用建议
 1. 在Windows上开发时，建议使用MinGW或MSYS2环境

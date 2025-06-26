@@ -89,11 +89,11 @@ clean:
 ifeq ($(PLATFORM),windows)
 	@if exist "$(OBJ_DIR)" $(RMDIR) "$(OBJ_DIR)" 2>$(NULL_DEVICE) || echo.
 	@if exist "$(TARGET)" $(RM) "$(TARGET)" 2>$(NULL_DEVICE) || echo.
-	@if exist "dnsserver.log" $(RM) "dnsserver.log" 2>$(NULL_DEVICE) || echo.
+	@if exist "dnsrelay.log" $(RM) "dnsrelay.log" 2>$(NULL_DEVICE) || echo.
 else
 	@$(RMDIR) $(OBJ_DIR) 2>$(NULL_DEVICE) || true
 	@$(RM) $(TARGET) 2>$(NULL_DEVICE) || true
-	@$(RM) dnsserver.log 2>$(NULL_DEVICE) || true
+	@$(RM) dnsrelay.log 2>$(NULL_DEVICE) || true
 endif
 	@echo "Clean complete."
 
