@@ -118,7 +118,7 @@ typedef struct {
 
 typedef struct IPDomainMapping{
     char domain[DOMAIN_MAX_LEN];//域名
-    IPAdress ip_addr;//IP地址
+    
     time_t expire_time; // 过期时间
     time_t last_used;//最后使用时间{LRU用}
     struct IPDomainMapping *next; // 链表指针
