@@ -1,22 +1,4 @@
 #include "server.h"
-int client_socket;
-int server_socket;
-
-// 用于将socket绑定到本地地址
-struct sockaddr_in client_address;
-struct sockaddr_in server_address;
-
-int address_length;
-char *remote_dns; // 远程主机ip地址
-
-WSADATA wsa_data;
-SOCKET sock;
-// 用于recvform获取服务器和客户端的地址信息
-struct sockaddr_in serverAddress;
-struct sockaddr_in clientAddress;
-int addressLength;
-
-char buffer[BUFFER_SIZE];
 
 int ip_str_to_bytes_sscanf(const char* ip_str, uint8_t* bytes) {
     if (!ip_str || !bytes)
@@ -160,14 +142,16 @@ void poll() {
 void receiveClient() { 
     DNS_message msg;
     int recv_len = recvfrom(client_socket, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&clientAddress, &address_length);
+    // printf("111");
     printf("Received DNS packet from %s:%d, length = %d bytes\n", inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port), recv_len);
     if(recv_len < 0) {
         perror("recvfrom failed");
         return ;
     }
-
+    // printf("222");
     // 解析 DNS 消息
     parse_dns_packet(&msg, buffer, recv_len);
+    // printf("333");
 
     // 检查缓存（这里假设只检查第一个问题）
     char *query_name = NULL;
@@ -178,6 +162,7 @@ void receiveClient() {
     }
     if (query_name != NULL) {
         printf("query_name : %s  %d \n", query_name, query_type);
+        // printf("444");
     } else {
         return ;
     }

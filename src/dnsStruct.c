@@ -17,7 +17,7 @@ char *parse_dns_name(const char*buffer,int*offset,int max_length) {
         }
 
         unsigned int len=(unsigned char)buffer[(*offset)++];
-    //检查单比特
+        //检查单比特
         if(len==0){
             if(name_pos==0){
                 name[name_pos++]='.';
@@ -232,8 +232,8 @@ void parse_resource_record(const char*buffer,int *offset,int max_length,DNS_reso
     //解析资源数据（Rdata)
     switch(rr->type)
     {
-        case 1: //A记录(IPV4)
-            if(rr->rdlength!=4){
+        case RR_A: //A记录(IPV4)
+            if(rr->rdlength == 4){
                 for(int i=0;i<4;i++){
                     rr->data.a_record.IP_addr[i]=buffer[(*offset)++];
                 }
@@ -242,27 +242,24 @@ void parse_resource_record(const char*buffer,int *offset,int max_length,DNS_reso
             }
             break;
 
-        case 28: //AAAA记录(IPV6)
-            if(rr->rdlength==16)
-            {
+        case RR_AAAA: //AAAA记录(IPV6)
+            if(rr->rdlength==16) {
                 for(int i=0;i<16;i++){
                     rr->data.aaaa_record.IP_addr[i]=buffer[(*offset)++];
                 }
                 printf("Address:");
-                for (int i = 0; i < 16; i++)
-            {
-                printf("%02x", rr->data.aaaa_record.IP_addr[i]);
-                if (i % 2 == 1 && i != 15)
-                    printf(":");
-            }
-            printf("\n");
+                for (int i = 0; i < 16; i++) {
+                    printf("%02x", rr->data.aaaa_record.IP_addr[i]);
+                    if (i % 2 == 1 && i != 15)
+                        printf(":");
+                }
+                printf("\n");
             }
             break;
         
-        case 5: //CNAME记录
-        rr->data.cname_record.name = parse_dns_name(buffer, offset, max_length);
-        if (rr->data.cname_record.name)
-        {
+        case RR_CNAME: //CNAME记录
+            rr->data.cname_record.name = parse_dns_name(buffer, offset, max_length);
+        if (rr->data.cname_record.name) {
             printf("  CNAME: %s\n", rr->data.cname_record.name);
         }
         break;
@@ -270,8 +267,7 @@ void parse_resource_record(const char*buffer,int *offset,int max_length,DNS_reso
     case 6: // SOA record
         rr->data.soa_record.MName = parse_dns_name(buffer, offset, max_length);
         rr->data.soa_record.RName = parse_dns_name(buffer, offset, max_length);
-        if (*offset + 20 > max_length)
-        {
+        if (*offset + 20 > max_length) {
             printf("Incomplete SOA record.\n");
             return;
         }
@@ -307,8 +303,7 @@ void parse_resource_record(const char*buffer,int *offset,int max_length,DNS_reso
 
 
 //构建DNS响应报文
-int build_dns_response(unsigned char *request, int requestLen, const char *ip)
-{
+int build_dns_response(unsigned char *request, int requestLen, const char *ip) {
     // 假设你已经解析出请求中的 ID、问题部分等内容
     // 这里只是简单构造一个响应示意，不完整！
 
@@ -345,25 +340,19 @@ int build_dns_response(unsigned char *request, int requestLen, const char *ip)
     return offset;
 }
 
-int find_free_slot(void)
-{
-    for (int i = 0; i < MAX_INFLIGHT; i++)
-    {
-        if (!ID_used[i])
-        {
+int find_free_slot(void) {
+    for (int i = 0; i < MAX_INFLIGHT; i++) {
+        if (!ID_used[i]) {
             return i;
         }
     }
     return -1; // 没有空闲槽，表示并发已满
 }
 
-void cleanup_timeouts(void)
-{
+void cleanup_timeouts(void) {
     time_t now = time(NULL);
-    for (int i = 0; i < MAX_INFLIGHT; i++)
-    {
-        if (ID_used[i] && now - ID_list[i].timestamp > QUERY_TIMEOUT_SEC)
-        {
+    for (int i = 0; i < MAX_INFLIGHT; i++) {
+        if (ID_used[i] && now - ID_list[i].timestamp > QUERY_TIMEOUT_SEC) {
             ID_used[i] = false;
             printf("Cleaning up timed out request for slot %d\n", i);
         }
