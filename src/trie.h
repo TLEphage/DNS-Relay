@@ -34,7 +34,7 @@ int DNSRecord_compare(const DNSRecord* a, const DNSRecord* b);
 
 // Trie树的节点结构
 typedef struct TrieNode {
-    struct TrieNode* children[37];  // 0-9, a-z, .
+    struct TrieNode* children[38];  // 0-9, a-z, -, .
     DNSRecord* head;                // 域名对应的DNS记录链表头指针
     DNSRecord* tail;                // 域名对应的DNS记录链表尾指针
     int isEnd;                      // 是否是域名字符串的末端
