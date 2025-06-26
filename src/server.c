@@ -17,6 +17,8 @@ void init_socket(int port) {
     memset(&client_address, 0, sizeof(client_address));
     memset(&server_address, 0, sizeof(server_address));
 
+    address_length = sizeof(client_address);
+
     client_address.sin_family = AF_INET;
     client_address.sin_addr.s_addr = INADDR_ANY; // INADDR_ANY表示本机的任意IP地址
     client_address.sin_port = htons(port);
@@ -59,7 +61,6 @@ void poll() {
 
     while (1)
     {
-        // timeoutHandle();
 
         fds[0].fd = client_socket;
         fds[0].events = POLLIN;  // POLLIN 表示可读
@@ -108,21 +109,20 @@ void receiveClient() {
     // 检查缓存（这里假设只检查第一个问题）
     char *query_name = NULL;
     uint16_t query_type = 0;
-    if (msg.header->ques_num > 0 && msg.question != NULL)
-    {
+    if (msg.header->ques_num > 0 && msg.question != NULL) {
         query_name = msg.question[0].qname;
         query_type = msg.question[0].qtype;
     }
-    if (query_name != NULL)
-    {
+    if (query_name != NULL) {
         printf("query_name : %s  %d \n", query_name, query_type);
+    } else {
+        return ;
     }
 
     uint16_t client_txid = msg.header->transactionID;
     // 保存客户端地址以便后续回复
     struct sockaddr_in original_client = clientAddress;
 
-    // print_cache_status(dns_cache);
 
     // 1. 先查询缓存，支持CNAME链解析
     CacheQueryResult* query_res;
@@ -135,11 +135,13 @@ void receiveClient() {
         // 先判断ip地址中是否有0.0.0.0的不良记录需要拦截
         CacheQueryResult *current = query_res;
         bool is_blocked = false;
+        uint8_t zero_ipv6[16] = {0};
+
         while (current != NULL) {
-            if (current->record->type == RR_A && strcmp(current->record->value.ipv4, "0.0.0.0") == 0) {
+            if (current->record->type == RR_A && current->record->value.ipv4 == 0) {
                 is_blocked = true;
                 break;
-            } else if(current->record->type == RR_AAAA && strcmp(current->record->value.ipv6, "::") == 0) {
+            } else if(current->record->type == RR_AAAA && memcmp(current->record->value.ipv6, zero_ipv6, 16) == 0) {
                 is_blocked = true;
                 break;
             }
@@ -158,6 +160,7 @@ void receiveClient() {
             } else {
                 printf("Failed to build NXDOMAIN response for: %s\n", query_name);
             }
+            cache_query_free(query_res);
             return ;
         } else {
             // 使用多记录响应构建函数
@@ -200,6 +203,7 @@ void receiveClient() {
             // 发送缓存响应给客户端
             sendto(client_socket, buffer, response_len, 0, (struct sockaddr *)&original_client, address_length);
         }
+        cache_query_free(query_res);
     } else {
         printf("Cache miss for: %s, forwarding to remote DNS\n", query_name);
 

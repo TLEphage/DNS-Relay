@@ -92,7 +92,8 @@ typedef struct DNS_message{
     struct DNS_resource_record *additional;
 }DNS_message;
 
-
+void parse_dns_packet(DNS_message *msg,const char *buffer,int length);
+void parse_resource_record(const char*buffer,int *offset,int max_length,DNS_resource_record *rr);
 
 
 /*IP地址结构体*/
