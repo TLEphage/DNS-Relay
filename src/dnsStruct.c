@@ -1,4 +1,4 @@
-#include "datastructure.h"
+#include "dnsStruct.h"
 /*DNS协议部分*/
 
 //解析DNS报文
@@ -100,8 +100,8 @@ void parse_dns_packet(DNS_message *msg,const char *buffer,int length){
         //Parse additional records
         if(arCount>0)
         {
-            msg->add=malloc(arCount * sizeof(DNS_resource_record));
-            if(!msg->add)
+            msg->additional=malloc(arCount * sizeof(DNS_resource_record));
+            if(!msg->additional)
             {
                 printf("Memory allocation failed for additional records.\n");
                 return;
@@ -110,7 +110,7 @@ void parse_dns_packet(DNS_message *msg,const char *buffer,int length){
             printf("\nAddtional records:\n");
             for(int i=0;i<arCount;i++){
                 printf("\nAdditional Record #%d:\n",i+1);
-                parse_resource_record(buffer,&offset,length,&msg->add[i]);
+                parse_resource_record(buffer,&offset,length,&msg->additional[i]);
             }
         }
 
@@ -244,12 +244,12 @@ void parse_resource_record(const char*buffer,int *offset,int max_length,DNS_reso
             if(rr->rdlength==16)
             {
                 for(int i=0;i<16;i++){
-                    rr->data.aaa_record.IP_addr[i]=buffer[(*offset)++];
+                    rr->data.aaaa_record.IP_addr[i]=buffer[(*offset)++];
                 }
                 printf("Address:");
                 for (int i = 0; i < 16; i++)
             {
-                printf("%02x", rr->data.aaa_record.IP_addr[i]);
+                printf("%02x", rr->data.aaaa_record.IP_addr[i]);
                 if (i % 2 == 1 && i != 15)
                     printf(":");
             }
