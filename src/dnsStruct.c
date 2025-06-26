@@ -1,4 +1,4 @@
-#include "datastructure.h"
+#include "dnsStruct.h"
 /*DNS协议部分*/
 
 //解析DNS报文
@@ -342,3 +342,4 @@ int build_dns_response(unsigned char *request, int requestLen, const char *ip)
 
     return offset;
 }
+
