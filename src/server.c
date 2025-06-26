@@ -17,6 +17,28 @@ struct sockaddr_in clientAddress;
 int addressLength;
 
 char buffer[BUFFER_SIZE];
+
+int ip_str_to_bytes_sscanf(const char* ip_str, uint8_t* bytes) {
+    if (!ip_str || !bytes)
+        return -1;
+
+    unsigned int b0, b1, b2, b3;
+    if (sscanf(ip_str, "%u.%u.%u.%u", &b0, &b1, &b2, &b3) != 4) {
+        return -1;
+    }
+
+    // 检查每个字节是否在0-255范围内
+    if (b0 > 255 || b1 > 255 || b2 > 255 || b3 > 255) {
+        return -1;
+    }
+
+    bytes[0] = (uint8_t)b0;
+    bytes[1] = (uint8_t)b1;
+    bytes[2] = (uint8_t)b2;
+    bytes[3] = (uint8_t)b3;
+
+    return 0;
+}
 void init_socket(int port) {
 
 
@@ -81,29 +103,6 @@ void init() {
     init_socket(PORT);
     init_DNS();
 }
-
-int ip_str_to_bytes_sscanf(const char* ip_str, uint8_t* bytes) {
-    if (!ip_str || !bytes)
-        return -1;
-
-    unsigned int b0, b1, b2, b3;
-    if (sscanf(ip_str, "%u.%u.%u.%u", &b0, &b1, &b2, &b3) != 4) {
-        return -1;
-    }
-
-    // 检查每个字节是否在0-255范围内
-    if (b0 > 255 || b1 > 255 || b2 > 255 || b3 > 255) {
-        return -1;
-    }
-
-    bytes[0] = (uint8_t)b0;
-    bytes[1] = (uint8_t)b1;
-    bytes[2] = (uint8_t)b2;
-    bytes[3] = (uint8_t)b3;
-
-    return 0;
-}
-
 
 void poll() {
     unsigned long block_mode = 1; // 设置为非阻塞模式: recvform被调用时如果没有数据会立即返回错误，不会阻塞调用线程(主循环)
