@@ -1,6 +1,85 @@
 #include "dnsStruct.h"
 /*DNS协议部分*/
 
+/*关键DNS域名压缩*/
+/*创建 256 字节缓冲区存储域名（DNS 域名最大长度限制）
+初始化位置指针和偏移量跟踪
+设置跳转计数器防止无限循环*/
+char *parse_dns_name(const char*buffer,int*offset,int max_length) {
+    char name[256];
+    int name_pos=0;
+    int initial_offset=*offset;
+    int jumps=0;
+
+    while(1){
+        if(*offset>=max_length){
+            return NULL;
+        }
+
+        unsigned int len=(unsigned char)buffer[(*offset)++];
+    //检查单比特
+        if(len==0){
+            if(name_pos==0){
+                name[name_pos++]='.';
+            }
+            name[name_pos]='\0';
+            break;
+        }
+
+        //检查双字节以上
+        if((len&0xc0)==0xc0){
+            if(*offset>=max_length){
+                return NULL;
+            }
+
+            //获取偏移指针
+            int ptr_offset=((len&0x3F)<<8)|(unsigned char)buffer[(*offset)++];
+            if(ptr_offset>=initial_offset)
+            {
+                return NULL;
+            }
+
+            if(jumps++>10){
+                return NULL;
+            }
+
+            int saved_offset=*offset;
+            *offset=ptr_offset;
+            char *rest=parse_dns_name(buffer,offset,max_length);
+            *offset=saved_offset;
+
+            if(!rest){
+                return NULL;
+            }
+
+            if(name_pos>0){
+                name[name_pos++]='.';
+            }
+            strcpy(name+name_pos,rest);
+            name_pos+=strlen(rest);
+            free(rest);
+            break;
+        }
+
+        //正常标签
+        if(name_pos>0){
+            name[name_pos++]='.';
+        }
+
+        if(*offset+len>max_length)
+        {
+            return NULL;
+        }
+
+        memcpy(name+name_pos,buffer+*offset,len);
+        *offset+=len;
+        name_pos+=len;
+
+    }
+    return strdup(name);
+}
+
+
 //解析DNS报文
 void parse_dns_packet(DNS_message *msg,const char *buffer,int length){
     if(length<12){
@@ -116,83 +195,6 @@ void parse_dns_packet(DNS_message *msg,const char *buffer,int length){
 
 }
 
-/*关键DNS域名压缩*/
-/*创建 256 字节缓冲区存储域名（DNS 域名最大长度限制）
-初始化位置指针和偏移量跟踪
-设置跳转计数器防止无限循环*/
-char *parse_dns_name(const char*buffer,int*offset,int max_length){
-    char name[256];
-    int name_pos=0;
-    int initial_offset=*offset;
-    int jumps=0;
-
-    while(1){
-        if(*offset>=max_length){
-            return NULL;
-        }
-
-        unsigned int len=(unsigned char)buffer[(*offset)++];
-//检查单比特
-        if(len==0){
-            if(name_pos==0){
-                name[name_pos++]='.';
-            }
-            name[name_pos]='\0';
-            break;
-        }
-
-        //检查双字节以上
-        if((len&0xc0)==0xc0){
-            if(*offset>=max_length){
-                return NULL;
-            }
-
-            //获取偏移指针
-            int ptr_offset=((len&0x3F)<<8)|(unsigned char)buffer[(*offset)++];
-            if(ptr_offset>=initial_offset)
-            {
-                return NULL;
-            }
-
-            if(jumps++>10){
-                return NULL;
-            }
-
-            int saved_offset=*offset;
-            *offset=ptr_offset;
-            char *rest=parse_dns_name(buffer,offset,max_length);
-            *offset=saved_offset;
-
-            if(!rest){
-                return NULL;
-            }
-
-            if(name_pos>0){
-                name[name_pos++]='.';
-            }
-            strcpy(name+name_pos,rest);
-            name_pos+=strlen(rest);
-            free(rest);
-            break;
-        }
-
-        //正常标签
-        if(name_pos>0){
-            name[name_pos++]='.';
-        }
-
-        if(*offset+len>max_length)
-        {
-            return NULL;
-        }
-
-        memcpy(name+name_pos,buffer+*offset,len);
-        *offset+=len;
-        name_pos+=len;
-
-    }
-    return strdup(name);
-}
 
 
 /*解析DNS资源记录的辅助函数*/

@@ -1,3 +1,6 @@
+#pragma once
+
+
 #include<stdint.h>
 #include<stdlib.h>
 #include<string.h>
@@ -24,25 +27,6 @@ typedef struct DNS_question{
     uint16_t qtype;//查询类型(如A,AAAA,)
     uint16_t qclass;//查询类别(通常为IN，互联网)
 }DNS_question;
-
-typedef struct DNS_resource_record{
-    char *name;//域名
-    uint16_t type;//资源记录类型
-    uint16_t class;//资源记录类别
-    uint32_t ttl;//生存时间
-    uint16_t rdlength;//资源数据长度
-    union ResourceData data;//资源数据
-}DNS_resource_record;
-
-
-/*报文结构体*/
-typedef struct DNS_message{
-    struct DNS_header *header;//报文头部
-    struct DNS_question *question;
-    struct DNS_resource_record *answer;
-    struct DNS_resource_record *authority;
-    struct DNS_resource_record *additional;
-}DNS_message;
 
 union ResourceData{
     struct/*ipv4*/
@@ -74,25 +58,42 @@ union ResourceData{
     }cname_record;
 };
 
-//Trie树在xn那
+typedef struct DNS_resource_record{
+    char *name;//域名
+    uint16_t type;//资源记录类型
+    uint16_t class;//资源记录类别
+    uint32_t ttl;//生存时间
+    uint16_t rdlength;//资源数据长度
+    union ResourceData data;//资源数据
+}DNS_resource_record;
+
 
 /*
-typedef struct node{
-    uint16_t type;
-    char domain[DOMAIN_MAX_LEN];//域名
-
-    union{
-        IPAdress ip_addr;
-        char cname[DOMAIN_MAX_LEN];
-    }data;
-
-    time_t expire_time; // 过期时间
-    time_t last_used;//最后使用时间{LRU用}
-
-    struct node*next;
-    struct node*lru_prev,*lru_next; // LRU链表指针
-}DNSRecord;
+    本头文件专门用于存放DNS报文结构体Message的定义，以及一切有关DNS报文的操作
+    DNS 报文格式如下：
+    +---------------------+
+    |        Header       | 报文头，固定12字节，由结构体DNS_header存储
+    +---------------------+
+    |       Question      | 向域名服务器的查询请求，由结构体DNS_question存储
+    +---------------------+
+    |        Answer       | 对于查询问题的回复
+    +---------------------+
+    |      Authority      | 指向授权域名服务器
+    +---------------------+
+    |      Additional     | 附加信息
+    +---------------------+
+    后面三个部分由结构体DNS_resource_record存储
 */
+typedef struct DNS_message{
+    struct DNS_header *header;//报文头部
+    struct DNS_question *question;
+    struct DNS_resource_record *answer;
+    struct DNS_resource_record *authority;
+    struct DNS_resource_record *additional;
+}DNS_message;
+
+
+
 
 /*IP地址结构体*/
 /*
@@ -127,23 +128,7 @@ typedef struct {
 
 // }IPDomainMapping;
 
-//DNS缓存
 
-/*
-    typedef struct DNSCache{
-        TrieNode *root;
-        DNSRecord *lru_head; // LRU链表头
-        DNSRecord *lru_tail; // LRU链表尾
-        int capacity; // 缓存容量
-        int size;   // 当前缓存大小
-        IPDomainMapping *ip_domain_head; // IP域名映射表头
-        IPDomainMapping *ip_domain_tail; // IP域名映射表尾
-    }DNSCache;
-
-    DNSCache *dns_cache;
-*/
-
-//IP域名映射
 
 //转发查询
 typedef struct{

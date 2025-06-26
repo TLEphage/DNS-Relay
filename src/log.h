@@ -3,10 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdarg.h>
 
 // 日志等级
 typedef enum {
-    LOG_LEVEL_NONE = 0,   // 不打印日志
+    LOG_LEVEL_NONE = 0,   // 不打印日志P
     LOG_LEVEL_INFO = 1,   // 打印普通信息
     LOG_LEVEL_DEBUG = 2,  // 打印调试信息
     LOG_LEVEL_BYTE = 3    // 打印字节信息

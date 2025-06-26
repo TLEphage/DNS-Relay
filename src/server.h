@@ -12,6 +12,7 @@
 #include "cache.h"
 #include "response.h"
 #include "dnsStruct.h"
+#include "log.h"
 
 // #pragma comment(lib, "ws2_32.lib")
 // #pragma warning(disable : 4996)

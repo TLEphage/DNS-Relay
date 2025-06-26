@@ -1,3 +1,5 @@
+#pragma once
+
 #include <WinSock2.h>
 #include <stdbool.h>
 #include <stdint.h>
