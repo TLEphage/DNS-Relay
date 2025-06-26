@@ -22,24 +22,24 @@
 #define PORT 53
 #define BUFFER_SIZE 512
 
-extern int client_socket;
-extern int server_socket;
+int client_socket;
+int server_socket;
 
 // 用于将socket绑定到本地地址
-extern struct sockaddr_in client_address;
-extern struct sockaddr_in server_address;
+struct sockaddr_in client_address;
+struct sockaddr_in server_address;
 
-extern int address_length;
-extern char *remote_dns; // 远程主机ip地址
+int address_length;
+char *remote_dns; // 远程主机ip地址
 
-extern WSADATA wsa_data;
-extern SOCKET sock;
+WSADATA wsa_data;
+SOCKET sock;
 // 用于recvform获取服务器和客户端的地址信息
-extern struct sockaddr_in serverAddress;
-extern struct sockaddr_in clientAddress;
-extern int addressLength;
+struct sockaddr_in serverAddress;
+struct sockaddr_in clientAddress;
+int addressLength;
 
-extern char buffer[BUFFER_SIZE];
+char buffer[BUFFER_SIZE];
 
 void init();
 void poll();
