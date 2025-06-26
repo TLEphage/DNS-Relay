@@ -178,17 +178,12 @@ IDTable *id_table;
 // //全局拦截表
 // extern DomainBlackList *domain_blacklist;
 
-//日志等级
-typedef enum{
-    LOG_LEVEL_NONE=0,//不打印日志
-    LOG_LEVEL_INFO=1,//打印普通信息
-    LOG_LEVEL_DEBUG=2,//打印调试信息
-}LogLevel;
+void parse_dns_packet(DNS_message *msg, const char *buffer, int length);
+char *parse_dns_name(const char *buffer, int *offset, int max_length);
+void parse_resource_record(const char *buffer, int *offset, int max_length, DNS_resource_record *rr);
 
-//IP地址转换
-void transferIp(char* originIP, uint8_t* transIP);
-void transferIp6(char* originIP, uint16_t* transIP);
-int hex_to_int(char c);
+int build_dns_query(char *buf, const char *host);   
+int build_dns_response(unsigned char *request, int requestLen, const char *ip);
 
 
 #define MAX_INFLIGHT 1024   // 最大并发未完成转发请求数
