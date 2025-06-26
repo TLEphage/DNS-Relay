@@ -128,7 +128,7 @@ typedef struct {
 // }IPDomainMapping;
 
 //DNS缓存
-<<<<<<< HEAD
+
 /*
     typedef struct DNSCache{
         TrieNode *root;
@@ -142,19 +142,6 @@ typedef struct {
 
     DNSCache *dns_cache;
 */
-=======
-typedef struct DNSCache{
-    TrieNode *root;
-    DNSRecord *lru_head; // LRU链表头
-    DNSRecord *lru_tail; // LRU链表尾
-    int capacity; // 缓存容量
-    int size;   // 当前缓存大小
-    IPDomainMapping *ip_domain_head; // IP域名映射表头
-    IPDomainMapping *ip_domain_tail; // IP域名映射表尾
-} DNSCache;
-
-DNSCache *dns_cache;
->>>>>>> 8b8e9e9de93b8ccfc964c4dda9272ae6a4dfcdcc
 
 //IP域名映射
 
