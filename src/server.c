@@ -83,7 +83,7 @@ void init_DNS(void) {
     cache_print(dns_cache);
 }
 void init() {
-    remote_dns = "8.8.8.8";
+    remote_dns = "10.3.9.6";
     init_socket(PORT);
     init_DNS();
 }
