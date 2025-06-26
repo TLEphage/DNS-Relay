@@ -160,9 +160,9 @@ typedef struct{
 }IDTable;
 
 
-
 IDTable *id_table;
 
+<<<<<<< HEAD
 // /*域名拦截表*/
 // typedef struct BlackListEntry{
 //     char domain[DOMAIN_MAX_LEN];//被拦截的域名
@@ -186,33 +186,14 @@ int build_dns_query(char *buf, const char *host);
 int build_dns_response(unsigned char *request, int requestLen, const char *ip);
 
 
+=======
+>>>>>>> 5e8e569a5068aeb5b82537fd97a6adf2d2c6dab1
 #define MAX_INFLIGHT 1024   // 最大并发未完成转发请求数
 #define QUERY_TIMEOUT_SEC 5 // 超时未得到上游响应
 
 IDEntry ID_list[MAX_INFLIGHT];
 bool ID_used[MAX_INFLIGHT];
 
-int find_free_slot(void)
-{
-    for (int i = 0; i < MAX_INFLIGHT; i++)
-    {
-        if (!ID_used[i])
-        {
-            return i;
-        }
-    }
-    return -1; // 没有空闲槽，表示并发已满
-}
+int find_free_slot(void);
 
-void cleanup_timeouts(void)
-{
-    time_t now = time(NULL);
-    for (int i = 0; i < MAX_INFLIGHT; i++)
-    {
-        if (ID_used[i] && now - ID_list[i].timestamp > QUERY_TIMEOUT_SEC)
-        {
-            ID_used[i] = false;
-            printf("Cleaning up timed out request for slot %d\n", i);
-        }
-    }
-}
+void cleanup_timeouts(void);

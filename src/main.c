@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     print_project_info();
 
     init_socket(PORT);
-    init_DNS();
+    // init_DNS();
 
     poll();
 
