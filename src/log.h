@@ -1,3 +1,6 @@
+#ifndef LOG_H
+#define LOG_H
+
 #pragma once
 
 #include <stdio.h>
@@ -61,3 +64,5 @@ void print_project_info(void);
             log_write("WARN ", fmt, ##__VA_ARGS__); \
         }                                           \
     } while (0)
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef DNSSTRUCT_H
+#define DNSSTRUCT_H
+
 #pragma once
 
 
@@ -157,3 +160,5 @@ bool ID_used[MAX_INFLIGHT];
 int find_free_slot(void);
 
 void cleanup_timeouts(void);
+
+#endif
