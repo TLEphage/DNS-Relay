@@ -74,12 +74,8 @@ union ResourceData{
 };
 
 //Trie树在xn那
-typedef struct TrieNode{
-    struct TrieNode *children[36]; // 26字母 + 10数字
-    DNSRecord *record;
-    int is_end;//是否是域名结尾
-}TrieNode;
 
+/*
 typedef struct node{
     uint16_t type;
     char domain[DOMAIN_MAX_LEN];//域名
@@ -95,8 +91,10 @@ typedef struct node{
     struct node*next;
     struct node*lru_prev,*lru_next; // LRU链表指针
 }DNSRecord;
+*/
 
 /*IP地址结构体*/
+/*
 typedef struct {
     uint8_t type;
     union{
@@ -107,6 +105,7 @@ typedef struct {
 	int isFilledIp6;	// 是否为IPv6地址
     struct IPAdress *next; // 下一条ip地址
 }IPAdress;
+*/
 
 /* ID转换结构体 */
 typedef struct {
