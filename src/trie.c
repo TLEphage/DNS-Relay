@@ -6,7 +6,9 @@
 
 DNSRecord* DNSRecord_create(const char* domain, time_t expire_time, uint8_t type, const void* value) {
     DNSRecord* record = (DNSRecord*)malloc(sizeof(DNSRecord));
-    memcpy(record->domain, domain, strlen(domain));
+    int len = strlen(domain);
+    memcpy(record->domain, domain, len);
+    record->domain[len]='\0';
     record->expire_time = expire_time;
     record->type = type;
     if (type == RR_A) {
@@ -63,8 +65,10 @@ int trie_insert(TrieNode* root, const char* domain, DNSRecord* record) {
             index = domain[i] - 'a' + 10;
         } else if(domain[i] >= 'A' && domain[i] <= 'Z') {
             index = domain[i] - 'A' + 10;
-        } else if(domain[i] == '.') {
+        } else if(domain[i] == '-') {
             index = 36;
+        } else if(domain[i] == '.') {
+            index = 37;
         } else {
             return -1;
         }
@@ -110,8 +114,10 @@ int trie_insert(TrieNode* root, const char* domain, DNSRecord* record) {
                 index = domain[i] - 'a' + 10;
             } else if(domain[i] >= 'A' && domain[i] <= 'Z') {
                 index = domain[i] - 'A' + 10;
-            } else if(domain[i] == '.') {
+            } else if(domain[i] == '-') {
                 index = 36;
+            } else if(domain[i] == '.') {
+                index = 37;
             } else {
                 return -1;
             }
@@ -137,8 +143,10 @@ TrieNode* trie_search(TrieNode* root, const char* domain) {
             index = domain[i] - 'a' + 10;
         } else if(domain[i] >= 'A' && domain[i] <= 'Z') {
             index = domain[i] - 'A' + 10;
-        } else if(domain[i] == '.') {
+        } else if(domain[i] == '-') {
             index = 36;
+        } else if(domain[i] == '.') {
+            index = 37;
         } else {
             return NULL;
         }
@@ -192,8 +200,10 @@ void trie_delete(TrieNode* root, const char* domain, const DNSRecord* record) {
             index = domain[i] - 'a' + 10;
         } else if(domain[i] >= 'A' && domain[i] <= 'Z') {
             index = domain[i] - 'A' + 10;
-        } else if(domain[i] == '.') {
+        } else if(domain[i] == '-') {
             index = 36;
+        } else if(domain[i] == '.') {
+            index = 37;
         } else {
             return;
         }
@@ -234,8 +244,10 @@ void trie_print(TrieNode* root, const char* domain) {
             index = domain[i] - 'a' + 10;
         } else if(domain[i] >= 'A' && domain[i] <= 'Z') {
             index = domain[i] - 'A' + 10;
-        } else if(domain[i] == '.') {
+        } else if(domain[i] == '-') {
             index = 36;
+        } else if(domain[i] == '.') {
+            index = 37;
         } else {
             return;
         }

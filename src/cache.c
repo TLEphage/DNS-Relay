@@ -68,10 +68,11 @@ void cache_update(DNSCache* cache, const char* domain, const uint8_t type, const
     }
     
     if (isExist == NULL) {     // 无相同记录
+        int flag = trie_insert(cache->root, domain, record);
+        if (flag == -1) return; // 插入失败
         if (cache->size == cache->capacity) { // 缓存已满
             cache_eliminate(cache);
         }
-        trie_insert(cache->root, domain, record);
         lru_insert(cache, record);
     } else {    // 有相同记录
         lru_delete(cache, isExist);
