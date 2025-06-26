@@ -116,7 +116,7 @@ typedef struct{
 IDTable *id_table;
 
 #define MAX_INFLIGHT 1024   // 最大并发未完成转发请求数
-#define QUERY_TIMEOUT_SEC 5 // 超时未得到上游响应
+#define QUERY_TIMEOUT_SEC 10 // 超时未得到上游响应
 
 IDEntry ID_list[MAX_INFLIGHT];
 bool ID_used[MAX_INFLIGHT];

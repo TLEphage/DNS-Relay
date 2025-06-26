@@ -64,7 +64,7 @@ void init_socket(int port) {
 
 void init_DNS(void) {
     dns_cache = cache_create(1024);
-    remote_dns = "202.106.0.20";
+    
 
     // 从 hosts 文件初始化 DNS 缓存和拦截表
     init_hosts_to_dns_cache();
@@ -83,6 +83,7 @@ void init_DNS(void) {
     cache_print(dns_cache);
 }
 void init() {
+    remote_dns = "8.8.8.8";
     init_socket(PORT);
     init_DNS();
 }
@@ -271,12 +272,19 @@ void receiveClient() {
         ID_used[slot] = true;
 
         // 修改事务ID为槽位索引+1，避免冲突
-        uint16_t new_txid = slot + 1;
+        uint16_t new_txid = (slot % 0xFFFF) + 1;
         buffer[0] = (new_txid >> 8) & 0xFF;
         buffer[1] = new_txid & 0xFF;
 
+        printf("DEBUG: Before sendto: server_address.sin_family = %d (should be 2), IP = %s\n",
+           server_address.sin_family, inet_ntoa(server_address.sin_addr));
+
         // 转发请求到远程DNS服务器
-        sendto(server_socket, buffer, recv_len, 0, (struct sockaddr *)&server_address, sizeof(server_address));
+        if(sendto(server_socket, buffer, recv_len, 0, (struct sockaddr *)&server_address, sizeof(server_address)) == SOCKET_ERROR) {
+            printf("Error sending request to remote DNS server\n");
+            LOG_ERROR("Sendto failed: %d", WSAGetLastError());
+            ID_used[slot] = false; // 立即释放槽位
+        }
     }
 }
 
