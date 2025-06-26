@@ -80,7 +80,6 @@ void init_DNS(void) {
     // 将文本形式的 IP 地址转换为二进制形式的函数
     inet_pton(AF_INET6, "2001:db8:85a3:0000:0000:8a2e:370:7334", ipv6);
     cache_update(dns_cache, "ipv.example.com", RR_AAAA, ipv6, 7200);
-    cache_print(dns_cache);
 }
 void init() {
     remote_dns = "10.3.9.6";
@@ -171,6 +170,8 @@ void receiveClient() {
     uint16_t client_txid = msg.header->transactionID;
     // 保存客户端地址以便后续回复
     struct sockaddr_in original_client = clientAddress;
+
+    if(log_level >= LOG_LEVEL_DEBUG) cache_print_status(dns_cache);
 
 
     // 1. 先查询缓存，支持CNAME链解析
