@@ -98,6 +98,7 @@ void init_DNS(void) {
     // 将文本形式的 IP 地址转换为二进制形式的函数
     inet_pton(AF_INET6, "2001:db8:85a3:0000:0000:8a2e:370:7334", ipv6);
     cache_update(dns_cache, "ipv.example.com", RR_AAAA, ipv6, 7200);
+    cache_print(dns_cache);
 }
 void init() {
     init_socket(PORT);

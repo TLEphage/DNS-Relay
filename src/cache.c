@@ -51,6 +51,8 @@ void cache_update(DNSCache* cache, const char* domain, const uint8_t type, const
         fprintf(stderr, "Failed to create DNS record\n");
         return;
     }
+
+    printf("%s\n",domain);
     
     DNSRecord* isExist = NULL;
     TrieNode* node = trie_search(cache->root, domain);
@@ -89,6 +91,8 @@ CacheQueryResult* cache_query(DNSCache* cache, const char* domain, const uint8_t
     int cname_depth = 0;
     
     TrieNode* node = trie_search(cache->root, domain);
+    
+    // 处理CNAME链，最后得到的node不是CNAME
     while (node != NULL && node->head->type == RR_CNAME) {
         ++cname_depth;
         if(cname_depth > MAX_CNAME_DEPTH) {
@@ -107,6 +111,11 @@ CacheQueryResult* cache_query(DNSCache* cache, const char* domain, const uint8_t
         current->next = NULL;
         node = trie_search(cache->root, node->head->domain);
     }
+    
+    if (node == NULL) {
+        cache_query_free(result);
+        return NULL;
+    }
 
     if (type == RR_CNAME) {
         return result;
@@ -114,17 +123,24 @@ CacheQueryResult* cache_query(DNSCache* cache, const char* domain, const uint8_t
     
     int isExist = 0;
     DNSRecord* p = node->head;
+    
     while (p != NULL) {
         if (p->type == type) {
+            if (current == NULL) {
+                result = malloc(sizeof(CacheQueryResult));
+                current = result;
+            } else {
+                current->next = malloc(sizeof(CacheQueryResult));
+                current = current->next;
+            }
             current->record = p;
-            current->next = malloc(sizeof(CacheQueryResult));
-            current = current->next;
             current->next = NULL;
-            current->record = NULL;
+            
             isExist = 1;
         }
         p = p->trie_next;
     }
+    
     if (!isExist) {
         cache_query_free(result);
         return NULL;
@@ -149,4 +165,14 @@ void cache_destroy(DNSCache* cache) {
         cache->head = next;
     }
     free(cache);
+}
+
+void cache_print(DNSCache* cache) {
+    DNSRecord* p = cache->head;
+    int cnt=0;
+    while (p != NULL) {
+        ++cnt;
+        printf("No.%d: %s\n",cnt, p->domain);
+        p = p->lru_next;
+    }
 }

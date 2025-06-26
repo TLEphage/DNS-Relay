@@ -6,7 +6,7 @@
 
 DNSRecord* DNSRecord_create(const char* domain, time_t expire_time, uint8_t type, const void* value) {
     DNSRecord* record = (DNSRecord*)malloc(sizeof(DNSRecord));
-    memcpy(record->domain, domain, sizeof(domain));
+    memcpy(record->domain, domain, strlen(domain));
     record->expire_time = expire_time;
     record->type = type;
     if (type == RR_A) {
