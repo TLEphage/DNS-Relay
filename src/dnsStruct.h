@@ -160,36 +160,7 @@ typedef struct{
 }IDTable;
 
 
-
 IDTable *id_table;
-
-// /*域名拦截表*/
-// typedef struct BlackListEntry{
-//     char domain[DOMAIN_MAX_LEN];//被拦截的域名
-
-//     time_t added_time;           //添加到拦截表的时间
-// }BlackListEntry;
-
-// typedef struct DomainBlakcList{
-//     BlackListEntry entries[MAX_BLACKLIST_SIZE];
-//     int count;//当前拦截域名数量
-// }DomainBlackList;
-
-// //全局拦截表
-// extern DomainBlackList *domain_blacklist;
-
-//日志等级
-typedef enum{
-    LOG_LEVEL_NONE=0,//不打印日志
-    LOG_LEVEL_INFO=1,//打印普通信息
-    LOG_LEVEL_DEBUG=2,//打印调试信息
-}LogLevel;
-
-//IP地址转换
-void transferIp(char* originIP, uint8_t* transIP);
-void transferIp6(char* originIP, uint16_t* transIP);
-int hex_to_int(char c);
-
 
 #define MAX_INFLIGHT 1024   // 最大并发未完成转发请求数
 #define QUERY_TIMEOUT_SEC 5 // 超时未得到上游响应
@@ -197,27 +168,6 @@ int hex_to_int(char c);
 IDEntry ID_list[MAX_INFLIGHT];
 bool ID_used[MAX_INFLIGHT];
 
-int find_free_slot(void)
-{
-    for (int i = 0; i < MAX_INFLIGHT; i++)
-    {
-        if (!ID_used[i])
-        {
-            return i;
-        }
-    }
-    return -1; // 没有空闲槽，表示并发已满
-}
+int find_free_slot(void);
 
-void cleanup_timeouts(void)
-{
-    time_t now = time(NULL);
-    for (int i = 0; i < MAX_INFLIGHT; i++)
-    {
-        if (ID_used[i] && now - ID_list[i].timestamp > QUERY_TIMEOUT_SEC)
-        {
-            ID_used[i] = false;
-            printf("Cleaning up timed out request for slot %d\n", i);
-        }
-    }
-}
+void cleanup_timeouts(void);

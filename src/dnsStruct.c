@@ -342,3 +342,28 @@ int build_dns_response(unsigned char *request, int requestLen, const char *ip)
 
     return offset;
 }
+
+int find_free_slot(void)
+{
+    for (int i = 0; i < MAX_INFLIGHT; i++)
+    {
+        if (!ID_used[i])
+        {
+            return i;
+        }
+    }
+    return -1; // 没有空闲槽，表示并发已满
+}
+
+void cleanup_timeouts(void)
+{
+    time_t now = time(NULL);
+    for (int i = 0; i < MAX_INFLIGHT; i++)
+    {
+        if (ID_used[i] && now - ID_list[i].timestamp > QUERY_TIMEOUT_SEC)
+        {
+            ID_used[i] = false;
+            printf("Cleaning up timed out request for slot %d\n", i);
+        }
+    }
+}
