@@ -1,12 +1,25 @@
 #include "server.h"
+int client_socket;
+int server_socket;
 
-void init() {
-    init_socket(PORT);
-    init_DNS();
-}
+// 用于将socket绑定到本地地址
+struct sockaddr_in client_address;
+struct sockaddr_in server_address;
 
+int address_length;
+char *remote_dns; // 远程主机ip地址
 
+WSADATA wsa_data;
+SOCKET sock;
+// 用于recvform获取服务器和客户端的地址信息
+struct sockaddr_in serverAddress;
+struct sockaddr_in clientAddress;
+int addressLength;
+
+char buffer[BUFFER_SIZE];
 void init_socket(int port) {
+
+
     // 初始化，否则无法运行socket
     WORD wVersion = MAKEWORD(2, 2);
     WSADATA wsadata;
@@ -45,6 +58,30 @@ void init_socket(int port) {
     printf("==================================================================\n");
 }
 
+void init_DNS(void) {
+    dns_cache = cache_create(1024);
+    remote_dns = "202.106.0.20";
+
+    // 从 hosts 文件初始化 DNS 缓存和拦截表
+    init_hosts_to_dns_cache();
+
+    // 先手动添加一个默认的DNS记录（作为备用）
+    uint32_t ipv4;
+    inet_pton(AF_INET, "192.168.1.1", &ipv4);
+    ip_str_to_bytes_sscanf("192.168.1.1", (uint8_t*)&ipv4);
+    // printf("ipv4 %u\n", ipv4);
+    cache_update(dns_cache, "example.com", RR_A, &ipv4, 3600);
+
+    uint8_t ipv6[16];
+    // 将文本形式的 IP 地址转换为二进制形式的函数
+    inet_pton(AF_INET6, "2001:db8:85a3:0000:0000:8a2e:370:7334", ipv6);
+    cache_update(dns_cache, "ipv.example.com", RR_AAAA, ipv6, 7200);
+}
+void init() {
+    init_socket(PORT);
+    init_DNS();
+}
+
 int ip_str_to_bytes_sscanf(const char* ip_str, uint8_t* bytes) {
     if (!ip_str || !bytes)
         return -1;
@@ -67,26 +104,6 @@ int ip_str_to_bytes_sscanf(const char* ip_str, uint8_t* bytes) {
     return 0;
 }
 
-
-void init_DNS(void) {
-    dns_cache = cache_create(1024);
-    remote_dns = "202.106.0.20";
-
-    // 从 hosts 文件初始化 DNS 缓存和拦截表
-    init_hosts_to_dns_cache();
-
-    // 先手动添加一个默认的DNS记录（作为备用）
-    uint32_t ipv4;
-    inet_pton(AF_INET, "192.168.1.1", &ipv4);
-    ip_str_to_bytes_sscanf("192.168.1.1", (uint8_t*)&ipv4);
-    // printf("ipv4 %u\n", ipv4);
-    cache_update(dns_cache, "example.com", RR_A, &ipv4, 3600);
-
-    uint8_t ipv6[16];
-    // 将文本形式的 IP 地址转换为二进制形式的函数
-    inet_pton(AF_INET6, "2001:db8:85a3:0000:0000:8a2e:370:7334", ipv6);
-    cache_update(dns_cache, "ipv.example.com", RR_AAAA, ipv6, 7200);
-}
 
 void poll() {
     unsigned long block_mode = 1; // 设置为非阻塞模式: recvform被调用时如果没有数据会立即返回错误，不会阻塞调用线程(主循环)
