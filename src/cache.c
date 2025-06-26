@@ -92,7 +92,20 @@ CacheQueryResult* cache_query(DNSCache* cache, const char* domain, const uint8_t
     int cname_depth = 0;
     
     TrieNode* node = trie_search(cache->root, domain);
-    
+    // 更新LRU
+    if(node!=NULL && node->head!=NULL) {
+        if (node->head->type == RR_A) {
+            cache_update(cache, domain, RR_A, &node->head->value.ipv4, 300);
+        } else if (node->head->type == RR_AAAA) {
+            cache_update(cache, domain, RR_AAAA, &node->head->value.ipv6, 300);
+        } else if (node->head->type == RR_CNAME) {
+            cache_update(cache, domain, RR_CNAME, node->head->value.cname, 300);
+        } else {
+            return NULL;
+        }
+    }
+    // 注意此时的node已变，需要更新
+    node = trie_search(cache->root, domain);
     // 处理CNAME链，最后得到的node不是CNAME
     while (node != NULL && node->head->type == RR_CNAME) {
         ++cname_depth;
@@ -113,6 +126,7 @@ CacheQueryResult* cache_query(DNSCache* cache, const char* domain, const uint8_t
         node = trie_search(cache->root, node->head->domain);
     }
     
+    // 注意特判无ip情况
     if (node == NULL) {
         cache_query_free(result);
         return NULL;
@@ -181,14 +195,19 @@ void cache_print(DNSCache* cache) {
 void cache_print_status(DNSCache* cache) {
     const int DOMAIN_WIDTH = 40;
     const int TYPE_WIDTH = 2;
+    const int MAX_COUNT = 15;
 
     // 打印缓存状态
     printf("Cache Status: %d / %d\n", cache->size, cache->capacity);
     printf("================================ Cache Status ================================\n");
-    DNSRecord* p = cache->head;
+    DNSRecord* p = cache->tail;
+    int cnt = 0;
     while (p) {
         printf("| domain: %-*s type: %*d              -> |\n", DOMAIN_WIDTH, p->domain, TYPE_WIDTH, p->type);
-        p = p->lru_next;
+        p = p->lru_prev;
+        ++cnt;
+        if (cnt >= MAX_COUNT) break;
     }
+    printf("Remaining %d records\n", cache->size - cnt);
     printf("=============================================================================\n");
 }
