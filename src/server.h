@@ -1,11 +1,20 @@
 #pragma once
 
+#define _WIN32_WINNT 0x0602
 #include <WinSock2.h>
-#include <ws2tcpip.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
+#include <string.h>
+#include <time.h>
+#include <ws2tcpip.h>
 #include "cache.h"
+#include "response.h"
+#include "dnsStruct.h"
+
+// #pragma comment(lib, "ws2_32.lib")
+// #pragma warning(disable : 4996)
 
 
 #define PORT 53

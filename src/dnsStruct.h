@@ -162,32 +162,6 @@ typedef struct{
 
 IDTable *id_table;
 
-<<<<<<< HEAD
-// /*域名拦截表*/
-// typedef struct BlackListEntry{
-//     char domain[DOMAIN_MAX_LEN];//被拦截的域名
-
-//     time_t added_time;           //添加到拦截表的时间
-// }BlackListEntry;
-
-// typedef struct DomainBlakcList{
-//     BlackListEntry entries[MAX_BLACKLIST_SIZE];
-//     int count;//当前拦截域名数量
-// }DomainBlackList;
-
-// //全局拦截表
-// extern DomainBlackList *domain_blacklist;
-
-void parse_dns_packet(DNS_message *msg, const char *buffer, int length);
-char *parse_dns_name(const char *buffer, int *offset, int max_length);
-void parse_resource_record(const char *buffer, int *offset, int max_length, DNS_resource_record *rr);
-
-int build_dns_query(char *buf, const char *host);   
-int build_dns_response(unsigned char *request, int requestLen, const char *ip);
-
-
-=======
->>>>>>> 5e8e569a5068aeb5b82537fd97a6adf2d2c6dab1
 #define MAX_INFLIGHT 1024   // 最大并发未完成转发请求数
 #define QUERY_TIMEOUT_SEC 5 // 超时未得到上游响应
 
