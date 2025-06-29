@@ -5,11 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-
-#define DOMAIN_MAX_LEN 256
-#define RR_A 1
-#define RR_AAAA 28
-#define RR_CNAME 5
+#include "dnsStruct.h"
 
 // DNS记录结构
 typedef struct DNSRecord {

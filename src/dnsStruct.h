@@ -14,6 +14,10 @@
 #define MAX_BLACKLIST_SIZE 1000
 #define DOMAIN_MAX_LEN 256
 
+#define RR_A 1
+#define RR_AAAA 28
+#define RR_CNAME 5
+
 /*报文头部结构体*/
 typedef struct DNS_header{
     uint16_t transactionID;//事务ID
