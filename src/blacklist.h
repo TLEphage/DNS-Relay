@@ -11,7 +11,7 @@ typedef struct DomainBlacklist {
     int count;
 } DomainBlacklist;
 
-extern DomainBlacklist* blacklist;
+DomainBlacklist* blacklist;
 
 // 创建黑名单
 DomainBlacklist* blacklist_create();

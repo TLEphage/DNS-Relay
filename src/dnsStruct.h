@@ -8,7 +8,6 @@
 #include <stdbool.h>
 #include <winsock2.h>
 #include <time.h>
-#include "trie.h"
 
 // #include <arpa/inet.h> // Not available on Windows
 #define MAX_BLACKLIST_SIZE 1000

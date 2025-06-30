@@ -71,7 +71,6 @@ void init_DNS(void) {
         LOG_INFO("Failed to initialize domain blacklist\n");
     } else {
         LOG_INFO("Domain blacklist initialized successfully\n");
-        print_blacklist(blacklist);
     }
     
     // 从 hosts 文件初始化 DNS 缓存和拦截表

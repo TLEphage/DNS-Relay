@@ -47,6 +47,20 @@ int validate_ipv6(const char* ip_str) {
     return (colon_count >= 2 && colon_count <= 7);
 }
 
+// 检查 IP 是否为拦截地址
+int is_blocked_ip(const char* ip_str, int is_ipv6) {
+    if (!ip_str) return 0;
+    
+    if (is_ipv6) {
+        // IPv6 拦截地址：:: 或 0:0:0:0:0:0:0:0
+        return (strcmp(ip_str, "::") == 0 || 
+                strcmp(ip_str, "0:0:0:0:0:0:0:0") == 0);
+    } else {
+        // IPv4 拦截地址：0.0.0.0
+        return strcmp(ip_str, "0.0.0.0") == 0;
+    }
+}
+
 
 // 解析单行 hosts 文件内容
 int parse_hosts_line(char* line, int is_ipv6) {
