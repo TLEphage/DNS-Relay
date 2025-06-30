@@ -64,8 +64,16 @@ void init_socket(int port) {
 
 void init_DNS(void) {
     dns_cache = cache_create(1024);
-    
 
+    // 初始化域名拦截表
+    blacklist = blacklist_create();
+    if (blacklist == NULL) {
+        LOG_INFO("Failed to initialize domain blacklist\n");
+    } else {
+        LOG_INFO("Domain blacklist initialized successfully\n");
+        print_blacklist(blacklist);
+    }
+    
     // 从 hosts 文件初始化 DNS 缓存和拦截表
     init_hosts_to_dns_cache();
 
@@ -178,7 +186,28 @@ void receiveClient() {
     CacheQueryResult* query_res;
     query_res = cache_query(dns_cache, query_name, msg.question->qtype);
 
-    // 2. 如果缓存命中
+    // 2. 检查黑名单
+    CacheQueryResult* current = query_res;
+    while(current) {
+        int is_in_blacklist = blacklist_query(blacklist, current->record->domain);
+        if(is_in_blacklist) {
+            printf("Domain %s is in blacklist, returning NXDOMAIN response\n", current->record->domain);
+
+            // 构建NXDOMAIN响应
+            int response_len = build_nxdomain_response((unsigned char *)buffer, BUFFER_SIZE, client_txid, query_name, query_type);
+            if (response_len > 0) {
+                // 发送NXDOMAIN响应给客户端
+                sendto(client_socket, buffer, response_len, 0, (struct sockaddr *)&original_client, address_length);
+                printf("Sent NXDOMAIN response for blocked domain: %s\n", query_name);
+            } else {
+                printf("Failed to build NXDOMAIN response for: %s\n", query_name);
+            }
+            cache_query_free(query_res);
+            return ;
+        }
+    }
+
+    // 3. 如果缓存命中
     if (query_res != NULL) {
         printf("Cache hit for: %s\n", query_name);
 

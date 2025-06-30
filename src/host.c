@@ -94,21 +94,31 @@ int parse_hosts_line(char* line, int is_ipv6) {
         return -1;
     }
     
-
-    // 添加到 DNS 缓存
-    if (is_ipv6) {
-        uint8_t ipv6_bytes[16];
-        if (inet_pton(AF_INET6, ip_str, ipv6_bytes) == 1) {
-            cache_update(dns_cache, domain, RR_AAAA, ipv6_bytes, 86400); // TTL: 24小时
-            hosts_stats.ipv6_entries++;
-            printf("Added IPv6 cache: %s -> %s\n", domain, ip_str);
-        }
+    // 检查是否为拦截地址
+    int is_blocked = is_blocked_ip(ip_str, is_ipv6);
+    
+    // 处理主域名
+    if (is_blocked) {
+        // 添加到拦截表
+        blacklist_update(blacklist, domain);
+        printf("Added to blacklist: %s\n", domain);
+        hosts_stats.blocked_entries++;
     } else {
-        uint32_t ipv4_bytes;
-        if (inet_pton(AF_INET, ip_str, &ipv4_bytes) == 1) {
-            cache_update(dns_cache, domain, RR_A, &ipv4_bytes, 86400); // TTL: 24小时
-            hosts_stats.ipv4_entries++;
-            printf("Added IPv4 cache: %s -> %s\n", domain, ip_str);
+        // 添加到 DNS 缓存
+        if (is_ipv6) {
+            uint8_t ipv6_bytes[16];
+            if (inet_pton(AF_INET6, ip_str, ipv6_bytes) == 1) {
+                cache_update(dns_cache, domain, RR_AAAA, ipv6_bytes, 86400); // TTL: 24小时
+                hosts_stats.ipv6_entries++;
+                printf("Added IPv6 cache: %s -> %s\n", domain, ip_str);
+            }
+        } else {
+            uint32_t ipv4_bytes;
+            if (inet_pton(AF_INET, ip_str, &ipv4_bytes) == 1) {
+                cache_update(dns_cache, domain, RR_A, &ipv4_bytes, 86400); // TTL: 24小时
+                hosts_stats.ipv4_entries++;
+                printf("Added IPv4 cache: %s -> %s\n", domain, ip_str);
+            }
         }
     }
     
@@ -118,7 +128,12 @@ int parse_hosts_line(char* line, int is_ipv6) {
         while (token != NULL) {
             if (strlen(token) > 0) {
                 // 添加别名到 DNS 缓存
-                if (is_ipv6) {
+                if (is_blocked) {
+                    blacklist_update(blacklist, token);
+                    printf("Added to blacklist: %s\n", token);
+                    hosts_stats.blocked_entries++;
+                }
+                else if (is_ipv6) {
                     uint8_t ipv6_bytes[16];
                     if (inet_pton(AF_INET6, ip_str, ipv6_bytes) == 1) {
                         cache_update(dns_cache, token, RR_AAAA, ipv6_bytes, 86400);

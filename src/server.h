@@ -10,6 +10,7 @@
 #include <time.h>
 #include <ws2tcpip.h>
 #include "cache.h"
+#include "blacklist.h"
 #include "response.h"
 #include "dnsStruct.h"
 #include "log.h"

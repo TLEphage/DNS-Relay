@@ -21,12 +21,12 @@ void blacklist_update(DomainBlacklist* blacklist, const char* domain) {
     }
     if (blacklist->count >= MAX_BLACKLIST_SIZE) {
         printf("Fail to update blacklist: Blacklist is full\n");
-        return -1;
+        return ;
     }
     // 检查域名是否已存在
     if (blacklist_query(blacklist, domain)) {
         printf("Domain %s is already in blacklist\n", domain);
-        return 0;  // 已存在，返回成功
+        return ;  // 已存在，返回成功
     }
     // 添加新域名
     memcpy(blacklist->entries[blacklist->count].domain, domain, strlen(domain));
