@@ -186,6 +186,21 @@ void receiveClient() {
     query_res = cache_query(dns_cache, query_name, msg.question->qtype);
 
     // 2. 检查黑名单
+    if (blacklist_query(blacklist, query_name)) {
+        printf("Domain %s is in blacklist, returning NXDOMAIN response\n", query_name);
+
+        // 构建NXDOMAIN响应
+        int response_len = build_nxdomain_response((unsigned char *)buffer, BUFFER_SIZE, client_txid, query_name, query_type);
+        if (response_len > 0) {
+            // 发送NXDOMAIN响应给客户端
+            sendto(client_socket, buffer, response_len, 0, (struct sockaddr *)&original_client, address_length);
+            printf("Sent NXDOMAIN response for blocked domain: %s\n", query_name);
+        } else {
+            printf("Failed to build NXDOMAIN response for: %s\n", query_name);
+        }
+        cache_query_free(query_res);
+        return ;
+    }
     CacheQueryResult* current = query_res;
     while(current) {
         int is_in_blacklist = blacklist_query(blacklist, current->record->domain);
@@ -204,6 +219,7 @@ void receiveClient() {
             cache_query_free(query_res);
             return ;
         }
+        current=current->next;
     }
 
     // 3. 如果缓存命中
