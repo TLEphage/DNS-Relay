@@ -97,6 +97,6 @@ void network_cleanup(void);
 int set_socket_nonblocking(socket_t sock);
 
 void init();
-void poll();
+void dns_poll();  // 重命名避免与系统poll()函数冲突
 void receiveClient();
 void receiveServer();

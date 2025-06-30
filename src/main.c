@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
 
     init();
 
-    poll();
+    dns_poll();
 
     // 跨平台清理
     CLOSE_SOCKET(sock);

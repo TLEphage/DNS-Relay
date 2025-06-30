@@ -1,7 +1,15 @@
 #pragma once
 
-#include <WinSock2.h>
-#include <ws2tcpip.h>
+// 跨平台网络头文件
+#ifdef _WIN32
+    #include <WinSock2.h>
+    #include <ws2tcpip.h>
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+#endif
+
 #include "cache.h"
 #include "blacklist.h"
 // 默认的 hosts 文件路径

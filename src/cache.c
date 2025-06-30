@@ -1,4 +1,7 @@
 #include "cache.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 DNSCache* cache_create(int capacity) {

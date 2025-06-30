@@ -136,7 +136,7 @@ void init() {
     init_DNS();
 }
 
-void poll() {
+void dns_poll() {
     // 设置为非阻塞模式: recvform被调用时如果没有数据会立即返回错误，不会阻塞调用线程(主循环)
     int server_result = set_socket_nonblocking(server_socket);
     int client_result = set_socket_nonblocking(client_socket);
