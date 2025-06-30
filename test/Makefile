@@ -21,12 +21,14 @@ CFLAGS = -Wall -O2 -I../src -fcommon
 
 # 源文件
 TEST_SOURCES = test_crossplatform.c
+BENCHMARK_SOURCES = benchmark.c
 
 # 目标文件
 TARGET = test_crossplatform$(TARGET_EXT)
+BENCHMARK_TARGET = benchmark$(TARGET_EXT)
 
 # 默认目标
-all: $(TARGET)
+all: $(TARGET) $(BENCHMARK_TARGET)
 
 # 编译测试程序
 $(TARGET): $(TEST_SOURCES)
@@ -34,15 +36,34 @@ $(TARGET): $(TEST_SOURCES)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "Test build complete: $@"
 
+# 编译基准测试程序
+$(BENCHMARK_TARGET): $(BENCHMARK_SOURCES)
+	@echo "Building benchmark test for $(PLATFORM)..."
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "Benchmark build complete: $@"
+
 # 运行测试
 test: $(TARGET)
 	@echo "Running cross-platform tests..."
 	@./$(TARGET)
 
+# 运行基准测试
+benchmark: $(BENCHMARK_TARGET)
+	@echo "Running performance benchmark..."
+	@echo "Note: Make sure DNS relay server is running on 127.0.0.1:53"
+	@echo "Starting benchmark in 3 seconds..."
+ifeq ($(PLATFORM),windows)
+	@timeout /t 3 /nobreak >nul
+else
+	@sleep 3
+endif
+	@./$(BENCHMARK_TARGET)
+
 # 清理
 clean:
 	@echo "Cleaning test files..."
 	@$(call RM_CMD,$(TARGET))
+	@$(call RM_CMD,$(BENCHMARK_TARGET))
 	@echo "Clean complete."
 
 # 帮助
