@@ -44,7 +44,7 @@
     #define ioctlsocket(s,cmd,arg) fcntl(s, F_SETFL, O_NONBLOCK)
     #define FIONBIO F_SETFL
     #define WSAPoll poll
-    #define POLLIN POLLIN
+    // POLLIN在Linux上已经定义，不需要重新定义
 
     // pollfd结构在Linux上已经定义
     // #define pollfd pollfd

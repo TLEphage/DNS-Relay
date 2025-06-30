@@ -26,7 +26,13 @@ void log_write(const char* level_tag, const char* fmt, ...) {
 
     time_t now = time(NULL);     // 获取当前时间戳
     struct tm tm_now;            // 声明一个结构化时间
-    localtime_s(&tm_now, &now);  // 将时间戳转换为本地时间
+
+    // 跨平台时间转换
+#ifdef _WIN32
+    localtime_s(&tm_now, &now);  // Windows版本
+#else
+    localtime_r(&now, &tm_now);  // Linux版本
+#endif
     char time_string[20];        // 生成格式化时间字符串
     strftime(time_string, sizeof(time_string), "%Y-%m-%d %H:%M:%S", &tm_now);
 
