@@ -1,13 +1,21 @@
 #pragma once
 
-#include <WinSock2.h>
+// 跨平台网络支持
+#ifdef _WIN32
+    #include <WinSock2.h>
+    #include <ws2tcpip.h>
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <ws2tcpip.h>
 #include "dnsStruct.h"
 #include "cache.h"
 

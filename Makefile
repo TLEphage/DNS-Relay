@@ -1,11 +1,31 @@
-# DNS Relay Server Makefile
+# DNS Relay Server Makefile - Cross Platform
 # 项目名称
 PROJECT_NAME = dnsrelay
+
+# 检测操作系统
+ifeq ($(OS),Windows_NT)
+    # Windows 环境
+    PLATFORM = windows
+    TARGET_EXT = .exe
+    LDFLAGS = -lws2_32
+    MKDIR_CMD = if not exist "$(1)" mkdir "$(1)"
+    RM_CMD = if exist "$(1)" rmdir /s /q "$(1)"
+    RM_FILE_CMD = if exist "$(1)" del "$(1)"
+    COPY_CMD = copy "$(1)" "$(2)" >nul
+else
+    # Linux/Unix 环境
+    PLATFORM = linux
+    TARGET_EXT =
+    LDFLAGS =
+    MKDIR_CMD = mkdir -p $(1)
+    RM_CMD = rm -rf $(1)
+    RM_FILE_CMD = rm -f $(1)
+    COPY_CMD = cp $(1) $(2)
+endif
 
 # 编译器和选项
 CC      := gcc
 CFLAGS  := -Wall -O2 -Isrc -fcommon
-LDFLAGS := -lws2_32
 
 # 目录设置
 SRC_DIR = src
@@ -15,7 +35,7 @@ TARGET_DIR = .
 # 源文件和目标文件
 SOURCES = $(wildcard $(SRC_DIR)/*.c)
 OBJECTS = $(SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
-TARGET = $(TARGET_DIR)/$(PROJECT_NAME).exe
+TARGET = $(TARGET_DIR)/$(PROJECT_NAME)$(TARGET_EXT)
 
 # 头文件目录已包含在CFLAGS中
 
@@ -48,17 +68,17 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 
 # 创建目录
 $(OBJ_DIR):
-	@if not exist "$(OBJ_DIR)" mkdir "$(OBJ_DIR)"
+	@$(call MKDIR_CMD,$(OBJ_DIR))
 
 $(TARGET_DIR):
-	@if not exist "$(TARGET_DIR)" mkdir "$(TARGET_DIR)"
+	@$(call MKDIR_CMD,$(TARGET_DIR))
 
 # 清理编译文件
 clean:
 	@echo "Cleaning build files..."
-	@if exist "$(OBJ_DIR)" rmdir /s /q "$(OBJ_DIR)"
-	@if exist "$(TARGET)" del "$(TARGET)"
-	@if exist "dnsrelay.log" del "dnsrelay.log"
+	@$(call RM_CMD,$(OBJ_DIR))
+	@$(call RM_FILE_CMD,$(TARGET))
+	@$(call RM_FILE_CMD,dnsrelay.log)
 	@echo "Clean complete."
 
 # 重新构建
@@ -67,18 +87,22 @@ rebuild: clean all
 # 安装（复制配置文件）
 install: $(TARGET)
 	@echo "Installing configuration files..."
-	@if exist "dnsrelay.txt" copy "dnsrelay.txt" "$(TARGET_DIR)\" >nul
+ifeq ($(PLATFORM),windows)
+	@if exist "dnsrelay.txt" $(call COPY_CMD,dnsrelay.txt,$(TARGET_DIR)\)
+else
+	@if [ -f "dnsrelay.txt" ]; then $(call COPY_CMD,dnsrelay.txt,$(TARGET_DIR)/); fi
+endif
 	@echo "Installation complete."
 
 # 运行程序
 run: $(TARGET)
 	@echo "Starting DNS Relay Server..."
-	@cd $(TARGET_DIR) && $(PROJECT_NAME).exe
+	@cd $(TARGET_DIR) && ./$(PROJECT_NAME)$(TARGET_EXT)
 
 # 调试运行
 debug: $(TARGET)
 	@echo "Starting DNS Relay Server in debug mode..."
-	@cd $(TARGET_DIR) && $(PROJECT_NAME).exe -dd
+	@cd $(TARGET_DIR) && ./$(PROJECT_NAME)$(TARGET_EXT) -dd
 
 # 显示帮助信息
 help:
@@ -94,8 +118,10 @@ help:
 	@echo "  help     - Show this help message"
 	@echo ""
 	@echo "Build configuration:"
+	@echo "  Platform: $(PLATFORM)"
 	@echo "  Compiler: $(CC)"
 	@echo "  Flags:    $(CFLAGS)"
+	@echo "  Linker:   $(LDFLAGS)"
 	@echo "  Target:   $(TARGET)"
 	@echo "  Sources:  $(words $(SOURCES)) files"
 

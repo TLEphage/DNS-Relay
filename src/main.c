@@ -27,7 +27,8 @@ int main(int argc, char* argv[]) {
 
     poll();
 
-    closesocket(sock);
-    WSACleanup();
+    // 跨平台清理
+    CLOSE_SOCKET(sock);
+    network_cleanup();
     return 0;
 }

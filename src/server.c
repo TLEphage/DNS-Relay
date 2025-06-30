@@ -1,5 +1,37 @@
 #include "server.h"
 
+// 跨平台网络初始化
+int network_init(void) {
+#ifdef _WIN32
+    WORD wVersion = MAKEWORD(2, 2);
+    WSADATA wsadata;
+    return WSAStartup(wVersion, &wsadata);
+#else
+    return 0; // Linux不需要特殊初始化
+#endif
+}
+
+// 跨平台网络清理
+void network_cleanup(void) {
+#ifdef _WIN32
+    WSACleanup();
+#else
+    // Linux不需要特殊清理
+#endif
+}
+
+// 跨平台设置socket为非阻塞模式
+int set_socket_nonblocking(socket_t sock) {
+#ifdef _WIN32
+    unsigned long block_mode = 1;
+    return ioctlsocket(sock, FIONBIO, &block_mode);
+#else
+    int flags = fcntl(sock, F_GETFL, 0);
+    if (flags == -1) return -1;
+    return fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+#endif
+}
+
 int ip_str_to_bytes_sscanf(const char* ip_str, uint8_t* bytes) {
     if (!ip_str || !bytes)
         return -1;
@@ -22,18 +54,21 @@ int ip_str_to_bytes_sscanf(const char* ip_str, uint8_t* bytes) {
     return 0;
 }
 void init_socket(int port) {
-
-
-    // 初始化，否则无法运行socket
-    WORD wVersion = MAKEWORD(2, 2);
-    WSADATA wsadata;
-    if (WSAStartup(wVersion, &wsadata) != 0)
-    {
+    // 跨平台网络初始化
+    if (network_init() != 0) {
+        printf("Failed to initialize network\n");
         return;
     }
 
     client_socket = socket(AF_INET, SOCK_DGRAM, 0);
     server_socket = socket(AF_INET, SOCK_DGRAM, 0);
+
+    if (client_socket == INVALID_SOCKET_VALUE || server_socket == INVALID_SOCKET_VALUE) {
+        printf("ERROR: Could not create socket: %d\n", GET_SOCKET_ERROR());
+        network_cleanup();
+        exit(-1);
+    }
+
     memset(&client_address, 0, sizeof(client_address));
     memset(&server_address, 0, sizeof(server_address));
 
@@ -48,11 +83,18 @@ void init_socket(int port) {
 
     // 端口复用
     const int REUSE = 1;
+#ifdef _WIN32
     setsockopt(client_socket, SOL_SOCKET, SO_REUSEADDR, (const char *)&REUSE, sizeof(REUSE));
+#else
+    setsockopt(client_socket, SOL_SOCKET, SO_REUSEADDR, &REUSE, sizeof(REUSE));
+#endif
 
-    if (bind(client_socket, (SOCKADDR *)&client_address, address_length) < 0)
+    if (bind(client_socket, (struct sockaddr *)&client_address, address_length) < 0)
     {
-        printf("ERROR: Could not bind: %s\n", strerror(errno));
+        printf("ERROR: Could not bind: %d\n", GET_SOCKET_ERROR());
+        CLOSE_SOCKET(client_socket);
+        CLOSE_SOCKET(server_socket);
+        network_cleanup();
         exit(-1);
     }
 
@@ -95,17 +137,17 @@ void init() {
 }
 
 void poll() {
-    unsigned long block_mode = 1; // 设置为非阻塞模式: recvform被调用时如果没有数据会立即返回错误，不会阻塞调用线程(主循环)
-    int server_result = ioctlsocket(server_socket, FIONBIO, &block_mode);
-    int client_result = ioctlsocket(client_socket, FIONBIO, &block_mode);
+    // 设置为非阻塞模式: recvform被调用时如果没有数据会立即返回错误，不会阻塞调用线程(主循环)
+    int server_result = set_socket_nonblocking(server_socket);
+    int client_result = set_socket_nonblocking(client_socket);
 
     // 检查是否设置非阻塞失败
-    if (server_result == SOCKET_ERROR || client_result == SOCKET_ERROR)
+    if (server_result != 0 || client_result != 0)
     {
-        printf("ioctlsocket failed with error: %d\n", WSAGetLastError());
-        closesocket(server_socket);
-        closesocket(client_socket);
-        WSACleanup();
+        printf("Set socket non-blocking failed with error: %d\n", GET_SOCKET_ERROR());
+        CLOSE_SOCKET(server_socket);
+        CLOSE_SOCKET(client_socket);
+        network_cleanup();
         return;
     }
 
@@ -119,16 +161,17 @@ void poll() {
         fds[1].fd = server_socket;
         fds[1].events = POLLIN;
 
-        // 调用 WSAPoll 进行等待
-        int ret = WSAPoll(fds, // fds = 上面填写好的 pollfd 数组
-                          2,   // 2 = 数组长度，共两个元素：一个监视客户端，一个监视上游 DNS
-                          5    // 5 = 超时时间：5 毫秒。如果 5ms 内没有任何一个 socket 可读，就返回 0
-        );
+        // 跨平台轮询等待
+#ifdef _WIN32
+        int ret = WSAPoll(fds, 2, 5);
+#else
+        int ret = poll(fds, 2, 5);
+#endif
 
-        if (ret == SOCKET_ERROR)
+        if (ret == SOCKET_ERROR_VALUE)
         {
-            printf("ERROR WSAPoll: %d.\n", WSAGetLastError());
-            LOG_INFO("ERROR WSAPoll: %d.\n", WSAGetLastError());
+            printf("ERROR Poll: %d.\n", GET_SOCKET_ERROR());
+            LOG_INFO("ERROR Poll: %d.\n", GET_SOCKET_ERROR());
         }
         else if (ret > 0)
         {
@@ -325,16 +368,16 @@ void receiveClient() {
            server_address.sin_family, inet_ntoa(server_address.sin_addr));
 
         // 转发请求到远程DNS服务器
-        if(sendto(server_socket, buffer, recv_len, 0, (struct sockaddr *)&server_address, sizeof(server_address)) == SOCKET_ERROR) {
+        if(sendto(server_socket, buffer, recv_len, 0, (struct sockaddr *)&server_address, sizeof(server_address)) == SOCKET_ERROR_VALUE) {
             printf("Error sending request to remote DNS server\n");
-            LOG_ERROR("Sendto failed: %d", WSAGetLastError());
+            LOG_ERROR("Sendto failed: %d", GET_SOCKET_ERROR());
             ID_used[slot] = false; // 立即释放槽位
         }
     }
 }
 
-void receiveServer() { 
-    int remote_addr_len = sizeof(server_address);
+void receiveServer() {
+    socklen_t remote_addr_len = sizeof(server_address);
     int remote_recvLen = recvfrom(server_socket, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_address, &remote_addr_len);
 
     if (remote_recvLen > 0) {

@@ -1,15 +1,20 @@
 #pragma once
 
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <winsock2.h>
 #include <time.h>
 
-// #include <arpa/inet.h> // Not available on Windows
+// 跨平台网络支持
+#ifdef _WIN32
+    #include <winsock2.h>
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+#endif
 #define MAX_BLACKLIST_SIZE 1000
 #define DOMAIN_MAX_LEN 256
 
